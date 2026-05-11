@@ -164,12 +164,12 @@ classdef IPC<handle
                 end
 
                 N=obj.samps_arr(s);     % number of samples 
-                K=floor(obj.sample_size/N); %number of independant subsets
+                k_max=floor(obj.sample_size/N); %number of independant subsets
                 % K=floor(obj.sample_size/obj.samps_arr(end));
 
-                C_arr=zeros(K,obj.basis_size);
+                C_arr=zeros(k_max,obj.basis_size);
 
-                for k=1:K
+                for k=1:k_max
                     batch_idx=(k-1)*N+1:k*N;
 
                     Ct=obj.calcCap(X,batch_idx,0,1);
@@ -178,15 +178,11 @@ classdef IPC<handle
                 
                 Cm_arr(s,:)=mean(C_arr,1);
 
-                if K>1
+                if k_max>1
                     Cs_arr(s,:)=std(C_arr,1);
                 end
             end
 
-        end
-
-        function idx=findBasisIdx(obj,basis_string)
-            idx=find(strcmpi(obj.basis_terms,basis_string+" "));
         end
 
     end
