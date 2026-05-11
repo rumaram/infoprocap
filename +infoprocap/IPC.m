@@ -1,154 +1,41 @@
-classdef Infocap<handle
+classdef IPC<handle
     properties
-        basis_range=[-1,1];     % limits of inner product integral of the hilbert space
-        basis_type="poly";
         progress_display=true;
-
-        u;      %inputs.
-        y;      %calculated basis functions of inputs u.
+        u;          %inputs.
+        u_basis;    % cell array of first max_deg no. of individual legendre basis functions (not products) calculated at input u
+        y;          %calculated product basis functions of inputs u.        
         max_deg;
         degrees;
         basis_size;
         sample_size;
-        ortho_funcs;
-        ortho_u;    % u calculated at all ortho functions
-        ortho_syms;
-        basis_terms;      
+        dimn;
         threshs;
         samps_arr;
-        ortho_mat;
     end
 
     methods
-        function obj=Infocap(max_deg)
+        function obj=IPC(u,max_deg)
             obj.max_deg=max_deg;
-            if obj.progress_display
-                disp("Generating orthogonal basis terms");
-            end
-            [obj.ortho_funcs,obj.ortho_syms]=Infocap.orthoPoly(obj.max_deg,obj.basis_range,obj.basis_type);
-            % obj.orthoPoly2(obj.max_deg);
-        end
-
-        function initBasis(obj,u)
-            obj.basis_size=nchoosek(obj.max_deg+size(u,2),obj.max_deg);
-            
-            
-            % getting basis
             obj.u=u;
-            max_neu=size(u,2);
+            obj.sample_size=size(u,1);
+            obj.dimn=size(u,2);
 
-            obj.degrees=zeros(obj.basis_size,max_neu); 
-        
-            term_count=0;
-            obj.basis_terms={"1"};
-
-            if obj.progress_display
-                disp("Calculating basis");
-            end
-            
-            obj.degrees(1,:)=zeros(1,size(obj.degrees,2));
-            for d_tot=1:obj.max_deg   % Total degree of the whole polynomial
-                
-                if(d_tot<max_neu)
-                    max_vars=d_tot;
-                else
-                    max_vars=max_neu;
-                end
-        
-                for vars=1:max_vars    % Number of time steps to use
-        
-                    d_perms=Infocap.perms_rep(1:d_tot,vars);
-                    d_array=[];  % array containing list of individual degress of polynomials
-                    for i=1:size(d_perms,1)
-                        if(sum(d_perms(i,:))==d_tot)
-                            d_array(end+1,:)=d_perms(i,:);
-                        end
-                    end
-        
-                    for d=d_array'
-                        for win=vars:max_neu    % window= max delay - min dealy +1
-        
-                            if(vars==1)
-                                pos=win;
-                            elseif(vars==2)
-                                pos=[1,win];
-                            else
-                                pos=nchoosek(2:win-1,vars-2); % delay of each individual variable
-                                pos=[ones(size(pos,1),1),pos,win*ones(size(pos,1),1)];
-                                pos=sort(pos,2);
-                            end
-                            
-                                               
-                            for p=pos'  % list of delay of each individual variable
-                                
-                                for neu=0:max_neu   % smallest/starting delay of window
-                                        
-                                        if(neu+p(end)>max_neu)
-                                            break;
-                                        end
-        
-                                        term_count=term_count+1;
-        
-                                        term="";
-                                        for i=1:size(pos,2)
-                                            neuron=neu+p(i);
-                                            term=term+"P_"+d(i)+"("+"u_"+neuron+")";
-                                            if neuron~=0
-                                                obj.degrees(term_count+1,neuron)=d(i);
-                                            end
-                                            
-                                        end
-                                        
-                                        obj.basis_terms{end+1}=term;
-                                        if(vars==1)
-                                            break;
-                                        end
-        
-                                end
-        
-                            end
-                        end
-        
-                    end
-        
-                end
-        
-            end
+            obj.degrees=IPC.stars_and_bars(obj.max_deg,obj.dimn);  % dsitribution of basis is equivalent to a stars and bars problem
             
             obj.basis_size=size(obj.degrees,1);
-            obj.basis_terms=string(obj.basis_terms);
-            
-            % calculating basis for the inputs
-            obj.sample_size=size(obj.u,1);
-            feature_size=size(obj.u,2);
-            
-            obj.y=zeros(obj.sample_size,obj.basis_size);
+            obj.y=ones(obj.sample_size,obj.basis_size);
 
+            obj.orthoPoly3();
             for basis=1:obj.basis_size
-                if obj.progress_display
-                    % dispPerc(basis,obj.basis_size);
-                end
-                prod=ones(obj.sample_size,1);
-                
-                for feat=1:feature_size
-                    if obj.degrees(basis,feat)~=0
-                        
-                        val=obj.u(:,feat);
-                        deg=obj.degrees(basis,feat);
-                        ortho_fn=obj.ortho_funcs{deg};
-
-                        lP=ortho_fn(val);   % for ortho fnctions               
-                        prod=prod.*lP;
-                    end
-
-                end
-                obj.y(:,basis)=prod;
+                for q=1:obj.dimn
+                    deg=obj.degrees(basis,q);
+                    obj.y(:,basis)=obj.y(:,basis).*obj.u_basis(:,q,deg+1);
+                end             
             end
+
             if obj.progress_display
                 disp("Basis Initiated");
             end
-            
-            obj.ortho_mat=(obj.y'*obj.y)./obj.sample_size;
 
         end
 
@@ -193,11 +80,6 @@ classdef Infocap<handle
 
             N = size(X,1);
 
-            % Xt with svd
-            % [U, S, V] = svd(X, 'econ');
-            % Xt=U*V';
-
-            % Xt with qr
             [Q,~]=qr(X,0);
             Xt=Q;
 
@@ -233,9 +115,9 @@ classdef Infocap<handle
             C_1=obj.calcCap(X,idxs1,0,1);   % capacity calculated with first half
             C_2=obj.calcCap(X,idxs2,0,1);   % capacity calculated with second half
 
-            C_N2=mean([C_1;C_2]);   % half(N/2) sample estimate
+            C_N_avg=mean([C_1;C_2]);   % average half(N/2) estimate
 
-            C=2*C_N-C_N2;   %linear fitting
+            C=2*C_N-C_N_avg;   %linear fitting
 
             C(1)=1;     % Capacity of first basis P0=1 due to column of ones
 
@@ -262,7 +144,7 @@ classdef Infocap<handle
             
             for s=1:length(obj.samps_arr)
                 if obj.progress_display
-                    dispPerc(s,length(obj.samps_arr));
+                    IPC.dispPerc(s,length(obj.samps_arr));
                 end
 
                 N=obj.samps_arr(s);     % number of samples 
@@ -480,111 +362,53 @@ classdef Infocap<handle
             idx=find(strcmpi(obj.basis_terms,basis_string+" "));
         end
 
-        function orthoPoly2(obj, n_max)
-            % legendre func handles using recurrence relation
-            obj.ortho_funcs=cell(n_max+1,1);
-            obj.ortho_funcs{1} = @(x) sqrt(1) * ones(size(x));   % sqrt(2*0+1) = 1
-            obj.ortho_funcs{2} = @(x) sqrt(3) * x;
+        function orthoPoly3(obj)
+            % legendre basis using recurrence relation calculated at data points x
+            obj.u_basis=zeros(obj.sample_size,obj.dimn,obj.max_deg+1);
+            obj.u_basis(:,:,1) = sqrt(1) * ones(size(obj.u)); 
+            obj.u_basis(:,:,2) = sqrt(3) * obj.u;
 
-            for n = 2:n_max
-                dispPerc(n,n_max);
-                a = sqrt((2*n+1) * (2*n-1)) / n;
-                b = ((n-1) / n) * sqrt((2*n+1) / (2*n-3));
-                f_n   = obj.ortho_funcs{n};      
-                f_nm1 = obj.ortho_funcs{n-1};    
-                obj.ortho_funcs{n+1} = @(x) a .* x .* f_n(x) - b .* f_nm1(x);
-            end
-            obj.ortho_funcs(1) = [];
-        end
-
-        function orthoPoly3(obj, n_max,x)
-            % legendre func handles using recurrence relation
-            obj.ortho_u=cell(n_max+1,1);
-            obj.ortho_u{1} = sqrt(1) * ones(size(x));   % sqrt(2*0+1) = 1
-            obj.ortho_u{2} = sqrt(3) * x;
-
-            for n = 2:n_max
-                dispPerc(n,n_max);
+            for n = 2:obj.max_deg
+                IPC.dispPerc(n,obj.max_deg);
                 a = sqrt((2*n+1) * (2*n-1)) / n;
                 b = ((n-1) / n) * sqrt((2*n+1) / (2*n-3)); 
-                obj.ortho_u{n+1} =  a .* x .* obj.ortho_u{n} - b .* obj.ortho_u{n-1};
+                obj.u_basis(:,:,n+1) =  a .* obj.u .* obj.u_basis(:,:,n) - b .* obj.u_basis(:,:,n-1);
             end
-            obj.ortho_u(1) = [];
+
         end
 
     end
 
     
     methods(Static)
+        function dispPerc(i,len)
+            if(floor(mod(i,len/100))==0)
+                percent=i*100/len;
+                disp("=== "+percent+" % ===");
+            end
+        end
 
-        function C2=Apply_threshold(C,N,T,p)
-            % N=number of readouts neurons
-            % T=size(obj.u,1);    % T=number of data points
-            
-            thr=2*chi2inv(1-p,N)/T;
-            C2=C;
-            for i=1:length(C2)
-                if(C2(i)<thr)
-                    C2(i)=0;
+        function Z = stars_and_bars(n, k)
+            % Generates all ways to distribute n stars and k bars, k bars=k+1 sections
+
+            % Total slots = n stars + k bars
+            n_slots= n + k;
+
+            % Get all ways to place k bars among the total slots
+            perms = nchoosek(1:n_slots, k);
+            num_combos = size(perms, 1);
+
+            Z = zeros(num_combos, k);
+
+            for i = 1:num_combos
+                % add start (0) and end (n_slots+1) as boundaries
+                bounds= [0, perms(i, :), n_slots + 1];
+                for j = 1:k
+                    % Stars in section j = gap between consecutive boundaries, minus 1 for the bar itself
+                    Z(i, j) = bounds(j + 1) - bounds(j) - 1;
                 end
             end
         end
-        
-        function y=perms_rep(x,k)
-            C = cell(k, 1);             %// Preallocate a cell array
-            [C{:}] = ndgrid(x);         %// Create K grids of values
-            y = cellfun(@(x){x(:)}, C); %// Convert grids to column vectors
-            y = [y{:}];    
-        
-        end
-
-        function [func_handles,ortho_syms] = orthoPoly(n,range,type)
-            a=range(1);
-            b=range(2);
-            syms t
-            assume(t, 'real');
-            
-            % Initialize the basis with monomials
-            basis = sym(zeros(1, n+1));
-
-            if type=="poly"
-                % algebraic monomials
-                for k = 0:n
-                    basis(k+1) = t^k;
-                end
-            elseif type=="trig"
-                % trignometric monomials
-                basis(1)=1;
-                for k = 1:n
-                    basis(2*k)   = cos(k*t);  % Cosine term
-                    basis(2*k+1) = sin(k*t);  % Sine term
-                end
-            end
-
-            % Gram-Schmidt process
-            ortho = sym(zeros(1, n+1));
-            for k = 0:n
-                v = basis(k+1);
-                for j = 0:k-1
-                    proj = int(ortho(j+1)*v, t, a, b) * ortho(j+1);
-                    v = v - proj;
-                end
-                norm_v = sqrt(int(v^2, t, a, b));
-                ortho(k+1) = simplify(v / norm_v);
-            end
-            ortho=sqrt(2).*ortho;    %normalisation
-            ortho_syms=ortho(2:end);
-        
-            % Step 3: Convert symbolic polynomials to function handles
-            % (excluding the first degree function=1)
-            func_handles = cell(1, n);
-            for k = 1:n
-                func_handles{k} = matlabFunction(ortho(k+1), 'Vars', t);
-            end
-            
-        end
-
-
 
     end
 

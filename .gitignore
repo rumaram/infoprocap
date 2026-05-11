@@ -1,0 +1,20 @@
+#folders
+exp_results/
+backup/
+datasets/
+lab_codes/
+plots/
+
+
+# Testing code
+AFA.m
+analyse_infocap.m
+main_elm_sym.m
+main_ml.m
+plots.m
+test.m
+Wigner3j.m
+
+
+# Other common things to ignore
+*.asv

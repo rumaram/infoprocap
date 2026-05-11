@@ -1,0 +1,418 @@
+classdef Phot_sys<handle
+
+    properties
+        % Common parameters
+        N           = 2^14;
+        dL     = 50e-2;    % Small segment for each step of split-step fourier method
+        L=5;    % Total propagation length
+        T=1000e-12;
+        % T=64e-12;
+        dis_save=50e-2;  % distance in between to save results 
+        P_avg = 6.6;      % Avg_power in dBm at the output
+        laser_pow=4.7;    % Avg power of input laser
+        waveshaper_loss=8.5;
+        voa_attn=0;
+
+        
+        % Pulsed laser parameters
+        wav_centr=1550e-9;
+        wav_span_encode=2.5e-9;
+        wav_span_meas=3.5e-9;  % wavelength span to take measurements
+        rep_rate=10e6;
+        
+
+        % osa_res=2.5e9;  % frequency resolution in Hz (0.02nm)
+        % osa_res=5e9;
+        osa_res_nm=0.05;    % wavelength resolution
+        osa_res_hz;
+        waveshaper_res_hz=12e9;    % frequency resolution in Hz
+       
+        bandW               = 0.6e-9;      % bandwidth in wavelength   
+        gamma       = 1.2e-3;
+        % beta        = [0 -2.3e-26 1e-40];
+        beta=[0,-2.3e-26, 0];
+        alpha=0;
+        chirp=0;
+
+        % Just declarations
+        t
+        L_d;
+        L_nl;
+        pulseW;     %fwhm
+        peakP; 
+        span_encode;
+        span_meas;
+        E;
+        Ef; 
+        expD; % Dispersion operator
+        wavs;    % to store wavelengths array centered at wav_centr
+        wavs_meas;  % wavelengths of measured span
+
+        readouts;   % Stores spectral intensity readouts at each length step
+        signals;     % Stores time signal at each length step
+        X;
+        w;
+        dw;
+    end
+
+
+
+    properties(Constant=true)
+        c=2.99792458e8;
+    end
+
+    
+    methods
+        function obj=ELM()       
+        end
+
+        function Update_params(obj)           
+            rng(3);
+
+            dt=obj.T/obj.N;
+            obj.t=(-obj.N/2:obj.N/2-1)*dt;
+            obj.dw=2*pi/obj.T;
+            obj.w=(-obj.N/2:obj.N/2-1)*obj.dw;
+
+            obj.pulseW=obj.bandW2pulseW(obj.bandW,"sech2"); 
+            obj.peakP=obj.avg2peak(obj.P_avg,"sech2");
+            t0=obj.pulseW/1.763;
+
+            % obj.E = sqrt(obj.peakP)* sech(obj.t/t0);  % without chirp
+            obj.E=sqrt(obj.peakP)* sech(obj.t/t0).*exp(-1i*obj.chirp*(obj.t).^2./(2*t0.^2));    % with chirp
+
+            freq0=obj.c/obj.wav_centr;
+            freqs=(obj.w./(2*pi))+freq0;
+            obj.wavs=obj.c./freqs;
+            obj.wavs=obj.wavs(end:-1:1);
+
+            [obj.span_encode,~]=obj.get_span_idx(obj.wav_span_encode);
+            [obj.span_meas,obj.wavs_meas]=obj.get_span_idx(obj.wav_span_meas);          
+
+            obj.Ef=fftshift(fft(obj.E));
+
+            obj.L_d=(obj.pulseW/1.76)^2/abs(obj.beta(2));
+            obj.L_nl=1/(obj.gamma*obj.peakP);
+            
+            D=(1i*obj.beta(2)*(obj.w.^2)/2)-(1i*obj.beta(3)*(obj.w.^3)/6);
+            obj.expD=exp((D-(obj.alpha/2))*obj.dL/2);
+
+            % calculating osa resolution in Hz
+            wav1_filt=(obj.wav_centr-(obj.osa_res_nm*1e-9)/2);
+            wav2_filt=(obj.wav_centr+(obj.osa_res_nm*1e-9)/2);
+            obj.osa_res_hz=abs((obj.c/wav2_filt)-(obj.c/wav1_filt));
+        end
+        
+        function Run_sys(obj,X)
+
+            obj.X=X;
+            sample_size=size(X,1);
+
+            len_save=floor(obj.L/obj.dis_save);    % number of lengths to save
+
+            R=zeros(len_save+1,length(obj.span_meas),sample_size);
+            % S=zeros(len_save+1,length(obj.span_meas),sample_size);
+
+            % tic
+            % figure(3);
+            dq=obj.parfor_progress(sample_size);
+            constobj=parallel.pool.Constant(obj);
+            fourrier_norm=(obj.N).^2;
+
+            for i=1:sample_size           
+
+                modulated_field=obj.Waveshape(X(i,:));
+
+                propagated_field=obj.Prop(modulated_field,obj.L);
+                propagated_spectrum= fftshift(fft(propagated_field,[],2),2);
+                output=abs(propagated_spectrum(:,obj.span_meas)).^2./(fourrier_norm);
+
+                R(:,:,i)=output;
+                
+                % modulated_spec=fftshift(fft(modulated_field));
+                % modulated_spec=repmat(modulated_spec,len_save+1,1);
+                % R(:,:,i)=abs(modulated_spec(:,obj.span_meas)).^2;
+
+                % R(:,:,i)=abs(modulated_field(obj.span_meas)).^2;
+                send(dq,i);
+            end
+            % toc
+ 
+            obj.readouts=R;
+            % obj.signals=S;
+            
+            
+        end
+
+
+        function A_prop=Prop(obj,A,distance)  %Split-step fourrier propagation
+            len_prop=length(0:obj.dL:distance);    % number of lengths to propagate
+            len_save=floor(distance/obj.dis_save);    % number of lengths to save
+            dis_bin=floor(obj.dis_save/obj.dL);     % bin size corresponding to save distance
+            
+            A_prop=zeros(len_save+1,length(A));
+            Ah=A;
+            A_prop(1,:)=Ah;
+
+            dis=2;
+            for i=2:len_prop
+                % dispPerc(i,obj.len_prop);
+                Ah=Dispers(Nonlin(Dispers(Ah,obj.expD)),obj.expD);
+                % Ah=Nonlin(Ah);
+
+                if(mod(i,dis_bin)==0)
+                    A_prop(dis,:)=Ah;
+                    dis=dis+1;
+                end
+            end
+        
+            % fft(time to freq)-> outputs such that the zero frequency is at the start.
+            % fftshift -> align it so that zero frequency is at middle.
+            % ifft(freq to time)-> expects freq signals where 0 frequency is at start.
+            % ifftshift -> uncenter a centered freq domain signal
+
+            function Ah=Dispers(A,expD2) % exponential dispersion function, input & output in time domain
+                product_centered=expD2.*fftshift(fft(A));% expD is already centered. fftshift make the 2nd term centered to match.
+
+                Ah=ifft(ifftshift(product_centered));%ifftshift uncenter the product
+            end
+            
+            function Ah=Nonlin(A) % exponential nonlinearity function, input & output in time domain
+                I=abs(A).^2;    %Intensity
+                NL=1i*obj.gamma*I;                
+                Ah=exp(NL*obj.dL).*A;
+            end
+        
+        end
+
+        function E_modulated=Waveshape(obj,x)
+            N_span_encode=length(obj.span_encode);
+            fill_idx=obj.fillbin(N_span_encode,length(x));
+            
+            mask=ones(1,N_span_encode);
+            
+            for i=1:N_span_encode
+                mask(i)=x(fill_idx(i));
+            end
+            mask=sign(mask).*sqrt(abs(mask));
+
+            % making mask same size as E by padding ones
+            mask2=ones(size(obj.E));    
+            mask2(obj.span_encode)=mask;
+            mask=mask2;
+            %===
+            mask_amp=abs(mask);
+
+            mask_ph=sign(mask);
+            mask_ph(mask_ph>=0)=0;
+            mask_ph(mask_ph<0)=pi;
+
+            phase_noise=normrnd(0,0.15e-2*2*pi,size(mask_ph));
+            mask_ph=mask_ph+phase_noise;
+
+            mask=mask_amp.*exp(1i*mask_ph);
+
+            span_padded=obj.get_span_idx(obj.wav_span_encode+1e-9); % higher pad span to reduce edge effects
+            span_padded2=obj.get_span_idx(obj.wav_span_encode+0.5e-9);  %lower pad span to include overflow outside encoding span
+            % 
+            mask2=mask;
+            mask2(span_padded)=obj.IF(mask(span_padded),obj.waveshaper_res_hz,"flattop");
+            mask(span_padded2)=mask2(span_padded2);
+
+            Ef2=fftshift(fft(obj.E));
+            Ef2=Ef2.*mask;
+            E_modulated=ifft(ifftshift(Ef2));      
+            % E_modulated=Ef2;
+            
+        end
+
+        % ====Utility functions=============%
+        function v2=bin_avg(obj,v,n_target)
+            n_bin=floor(length(v)/n_target);
+
+            v2=zeros(1,n_target);
+
+            for i=1:n_target-1
+                v2(i)=mean(v((i-1)*n_bin+1:i*n_bin));
+            end
+            v2(n_target)=mean(v((n_target-1)*n_bin+1:end));
+        end
+
+        function R=Prep_readouts(obj,dis,noise_std_norm)
+            % N_neu2=30;
+   
+            dis_idx=floor(dis/obj.dis_save)+1;
+            readouts2=permute(obj.readouts,[3,2,1]);
+            % signals2=permute(obj.signals,[3,2,1]);
+
+            R=readouts2(:,:,dis_idx);
+            % S=signals2(:,:,dis_idx);
+            
+            % R=R.*obj.c./(obj.wavs(obj.span).^2);
+            
+            % for i=1:size(R,1)
+            %     R(i,:)=obj.IF(R(i,:),obj.osa_res_hz,"flattop");
+            % end
+            R=R(:,end:-1:1);
+            
+        end
+
+        function dt=bandW2pulseW(obj,dwav,shape)   % converts pulse width in wavelength to time
+            % spec_wid in wavelength
+            if shape=="sech2"
+                tbp=0.315;
+            end
+            if shape=="gaussian"
+                tbp=0.441;
+            end
+
+            f0=obj.c/obj.wav_centr;
+            wav1=obj.wav_centr+dwav;
+            f1=obj.c/wav1;
+            df=f0-f1;
+            
+            dt=tbp/df;
+        end
+
+        function P_peak=avg2peak(obj,P_avg,mode)
+            % P_avg in dbm, P_peak in W, fwhm in seconds
+            P_avg_w=10^(P_avg/10)/1000; % P_avg in watt
+            if (mode=="sech2")
+                P_peak=0.8815*P_avg_w/(obj.rep_rate*obj.pulseW);
+            elseif(mode=="gaussian")
+                P_peak=0.94*P_avg_w/(obj.rep_rate*obj.pulseW);
+            end
+        end
+
+        function P_avg=peak2avg(obj,P_peak,mode)
+            % P_peak in W, P_avg in dbm
+            if (mode=="sech2")
+                P_avg_w=P_peak.*(obj.rep_rate*obj.pulseW)/0.88;
+                P_avg=10*log10(1000*P_avg_w);
+
+            elseif(mode=="gaussian")
+
+                P_avg_w=P_peak.*(obj.rep_rate*obj.pulseW)/0.94;
+                P_avg=10*log10(1000*P_avg_w);
+            end
+        end
+
+        function C=fillbin(obj,lenA,lenB)   % return indices of B that fills A by uniformly repeating B. (lenA>lenB)
+    
+            C=zeros(1,lenA);
+        
+            bin_width_low=floor(lenA/lenB);
+            bin_width_high=ceil(lenA/lenB);
+            
+            frac=(lenA/lenB)-floor(lenA/lenB);  %amount left behind when you use bin_width_low.
+            decimal_part=0; %stores accumulated decimal parts left behind due to rounding of bin_width
+            idx_start=1; 
+            idx_B=1;
+        
+            while idx_B<=lenB
+                if decimal_part>1   %when decimal part become>1 u use bin_width_high to compensate for lost parts
+                    bin_width=bin_width_high;
+                    decimal_part=decimal_part-1+frac;
+                else
+                    bin_width=bin_width_low;
+                    decimal_part=decimal_part+frac;
+                end
+                C(idx_start:idx_start+bin_width-1)=idx_B;
+                idx_start=idx_start+bin_width;
+                idx_B=idx_B+1;
+            end
+            C(C==0)=idx_B-1;
+    
+        end
+
+        function dq=parfor_progress(obj,num)
+            % PARFOR_PROGRESS Displays progress during a parfor loop.
+            %   N  - Total number of iterations in the parfor loop.
+            
+            % Create a DataQueue object to communicate between workers and the main thread
+            dq = parallel.pool.DataQueue;
+            
+            % Initialize the progress count variable
+            progress = 0;
+            
+            % Define the callback function to update progress
+            afterEach(dq, @updateProgress);
+        
+            % This function is called after each worker sends progress
+            function updateProgress(~)
+                progress = progress + 1;
+                pct = (progress / num) * 100;
+                fprintf('Progress: %.2f%%\n', pct);
+            end
+            
+            % Return the DataQueue so that it can be used inside the parfor loop
+            % You will use this DataQueue to send updates from inside your parfor loop.
+        end
+
+        function Ar=rescale_pow(obj,A,new_avg_pow)
+            peak_pow=max(abs(A).^2);
+            A=A./sqrt(peak_pow);  % normalising to peak power=1W
+            Ar=sqrt(obj.avg2peak(new_avg_pow,"sech2")).*A;  % scaling to new power
+        end
+
+        function [span,wavs]=get_span_idx(obj,wav_span)
+            wav_left=obj.wav_centr-wav_span./2;
+            wav_right=obj.wav_centr+wav_span./2;
+            freq_left=obj.c/wav_right;
+            freq_right=obj.c/wav_left;
+
+            freq0=obj.c/obj.wav_centr;
+            freqs=(obj.w./(2*pi))+freq0;
+
+            [~,left_idx]=min(abs(freqs-freq_left));
+            [~,right_idx]=min(abs(freqs-freq_right));
+
+            span=left_idx:right_idx;
+
+            wavs=obj.c./freqs(span);
+            wavs=wavs(end:-1:1);
+        end
+
+        function I= takeMeas(obj,field)
+            I=abs(fftshift(fft(field))).^2;
+            I=I(obj.span_meas);
+        end
+
+        function phi= get_nl_phase(obj,dis) % In multiple of pi
+            phi=(1/obj.L_nl)*dis/pi;
+        end
+
+        function B=IF(obj,A,filter_res,type)    % instrument filter (gaussian convolution)
+            %filter_res= resolution of the filter in Hz
+            
+            df=obj.dw/(2*pi);
+            N_filter=ceil(filter_res/df);     %number of samples in filter resolution
+            N_sig = N_filter / (2*sqrt(2*log(2))); % standard deviation in units of no. of samples 
+            
+            if N_filter<1
+                disp("Incompatible inputs");
+                return;
+            end
+            
+            if type=="gaussian"
+                % Build Gaussian kernel
+                half_width = ceil(4*N_sig);     % cover ±4σ
+                x=-half_width:half_width;
+                kernel=exp(-0.5*(x/N_sig).^2);
+                kernel = kernel / sum(kernel);   % normalize to unit area
+
+            elseif type=="flattop"
+                kernel = ones(1, N_filter) / N_filter; 
+
+            elseif type=="tukey"    % flat top with curved edges
+                flat_fraction=0.7;  % fraction of window that is flat
+                kernel = tukeywin(N_filter, 1-flat_fraction);    % tukey kernal
+                kernel = kernel / sum(kernel);
+            end
+            B=conv(A,kernel,'same');
+            end
+
+    end
+
+end
+
