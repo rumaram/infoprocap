@@ -25,13 +25,27 @@ classdef IPC<handle
             obj.basis_size=size(obj.degrees,1);
             obj.y=ones(obj.sample_size,obj.basis_size);
 
-            obj.orthoPoly3();
+            % Calculating legendre basis using recursive relations
+            obj.u_basis=zeros(obj.sample_size,obj.dimn,obj.max_deg+1);
+            obj.u_basis(:,:,1) = sqrt(1) * ones(size(obj.u)); 
+            obj.u_basis(:,:,2) = sqrt(3) * obj.u;
+
+            for n = 2:obj.max_deg            
+                a = sqrt((2*n+1) * (2*n-1)) / n;
+                b = ((n-1) / n) * sqrt((2*n+1) / (2*n-3)); 
+                obj.u_basis(:,:,n+1) =  a .* obj.u .* obj.u_basis(:,:,n) - b .* obj.u_basis(:,:,n-1);
+            end
+            %=================================
+
+            % Calculating product basis terms
             for basis=1:obj.basis_size
-                for q=1:obj.dimn
+                infoprocap.Utils.dispPerc(basis,obj.basis_size);
+                for q=1:obj.dimn             
                     deg=obj.degrees(basis,q);
                     obj.y(:,basis)=obj.y(:,basis).*obj.u_basis(:,q,deg+1);
                 end             
             end
+            %==================================
 
             if obj.progress_display
                 disp("Basis Initiated");
@@ -171,21 +185,6 @@ classdef IPC<handle
 
         function idx=findBasisIdx(obj,basis_string)
             idx=find(strcmpi(obj.basis_terms,basis_string+" "));
-        end
-
-        function orthoPoly3(obj)
-            % legendre basis using recurrence relation calculated at data points x
-            obj.u_basis=zeros(obj.sample_size,obj.dimn,obj.max_deg+1);
-            obj.u_basis(:,:,1) = sqrt(1) * ones(size(obj.u)); 
-            obj.u_basis(:,:,2) = sqrt(3) * obj.u;
-
-            for n = 2:obj.max_deg
-                infoprocap.Utils.dispPerc(n,obj.max_deg);
-                a = sqrt((2*n+1) * (2*n-1)) / n;
-                b = ((n-1) / n) * sqrt((2*n+1) / (2*n-3)); 
-                obj.u_basis(:,:,n+1) =  a .* obj.u .* obj.u_basis(:,:,n) - b .* obj.u_basis(:,:,n-1);
-            end
-
         end
 
     end

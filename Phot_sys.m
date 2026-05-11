@@ -63,7 +63,7 @@ classdef Phot_sys<handle
 
     
     methods
-        function obj=ELM()       
+        function obj=Phot_sys()       
         end
 
         function Update_params(obj)           
