@@ -1,40 +1,27 @@
 classdef Phot_sys<handle
 
     properties
-        % Common parameters
+
         N           = 2^14;
         dL     = 50e-2;    % Small segment for each step of split-step fourier method
         L=5;    % Total propagation length
         T=1000e-12;
-        % T=64e-12;
         dis_save=50e-2;  % distance in between to save results 
         P_avg = 6.6;      % Avg_power in dBm at the output
-        laser_pow=4.7;    % Avg power of input laser
-        waveshaper_loss=8.5;
-        voa_attn=0;
 
-        
-        % Pulsed laser parameters
         wav_centr=1550e-9;
         wav_span_encode=2.5e-9;
         wav_span_meas=3.5e-9;  % wavelength span to take measurements
         rep_rate=10e6;
         
-
-        % osa_res=2.5e9;  % frequency resolution in Hz (0.02nm)
-        % osa_res=5e9;
-        osa_res_nm=0.05;    % wavelength resolution
-        osa_res_hz;
-        waveshaper_res_hz=12e9;    % frequency resolution in Hz
+        waveshaper_res_hz=12e9;    % frequency resolution of waveshaper in Hz
+        osa_res_nm=0.05;
        
         bandW               = 0.6e-9;      % bandwidth in wavelength   
         gamma       = 1.2e-3;
-        % beta        = [0 -2.3e-26 1e-40];
         beta=[0,-2.3e-26, 0];
-        alpha=0;
-        chirp=0;
 
-        % Just declarations
+        % Declarations
         t
         L_d;
         L_nl;
@@ -49,7 +36,6 @@ classdef Phot_sys<handle
         wavs_meas;  % wavelengths of measured span
 
         readouts;   % Stores spectral intensity readouts at each length step
-        signals;     % Stores time signal at each length step
         X;
         w;
         dw;
@@ -63,10 +49,11 @@ classdef Phot_sys<handle
 
     
     methods
-        function obj=Phot_sys()       
+        function obj=Phot_sys()     
+            obj.updateParams();
         end
 
-        function Update_params(obj)           
+        function updateParams(obj)           
             rng(3);
 
             dt=obj.T/obj.N;
@@ -78,8 +65,7 @@ classdef Phot_sys<handle
             obj.peakP=obj.avg2peak(obj.P_avg,"sech2");
             t0=obj.pulseW/1.763;
 
-            % obj.E = sqrt(obj.peakP)* sech(obj.t/t0);  % without chirp
-            obj.E=sqrt(obj.peakP)* sech(obj.t/t0).*exp(-1i*obj.chirp*(obj.t).^2./(2*t0.^2));    % with chirp
+            obj.E=sqrt(obj.peakP)* sech(obj.t/t0);
 
             freq0=obj.c/obj.wav_centr;
             freqs=(obj.w./(2*pi))+freq0;
@@ -95,15 +81,10 @@ classdef Phot_sys<handle
             obj.L_nl=1/(obj.gamma*obj.peakP);
             
             D=(1i*obj.beta(2)*(obj.w.^2)/2)-(1i*obj.beta(3)*(obj.w.^3)/6);
-            obj.expD=exp((D-(obj.alpha/2))*obj.dL/2);
-
-            % calculating osa resolution in Hz
-            wav1_filt=(obj.wav_centr-(obj.osa_res_nm*1e-9)/2);
-            wav2_filt=(obj.wav_centr+(obj.osa_res_nm*1e-9)/2);
-            obj.osa_res_hz=abs((obj.c/wav2_filt)-(obj.c/wav1_filt));
+            obj.expD=exp(D*obj.dL/2);
         end
         
-        function Run_sys(obj,X)
+        function run(obj,X)
 
             obj.X=X;
             sample_size=size(X,1);
@@ -111,37 +92,20 @@ classdef Phot_sys<handle
             len_save=floor(obj.L/obj.dis_save);    % number of lengths to save
 
             R=zeros(len_save+1,length(obj.span_meas),sample_size);
-            % S=zeros(len_save+1,length(obj.span_meas),sample_size);
-
-            % tic
-            % figure(3);
-            dq=obj.parfor_progress(sample_size);
-            constobj=parallel.pool.Constant(obj);
             fourrier_norm=(obj.N).^2;
 
             for i=1:sample_size           
-
+                infoprocap.Utils.dispPerc(i,sample_size);
                 modulated_field=obj.Waveshape(X(i,:));
-
                 propagated_field=obj.Prop(modulated_field,obj.L);
                 propagated_spectrum= fftshift(fft(propagated_field,[],2),2);
                 output=abs(propagated_spectrum(:,obj.span_meas)).^2./(fourrier_norm);
 
-                R(:,:,i)=output;
-                
-                % modulated_spec=fftshift(fft(modulated_field));
-                % modulated_spec=repmat(modulated_spec,len_save+1,1);
-                % R(:,:,i)=abs(modulated_spec(:,obj.span_meas)).^2;
-
-                % R(:,:,i)=abs(modulated_field(obj.span_meas)).^2;
-                send(dq,i);
+                R(:,:,i)=output;  
             end
-            % toc
- 
             obj.readouts=R;
-            % obj.signals=S;
-            
-            
+            disp("Photonic system run finished");
+ 
         end
 
 
@@ -156,9 +120,7 @@ classdef Phot_sys<handle
 
             dis=2;
             for i=2:len_prop
-                % dispPerc(i,obj.len_prop);
                 Ah=Dispers(Nonlin(Dispers(Ah,obj.expD)),obj.expD);
-                % Ah=Nonlin(Ah);
 
                 if(mod(i,dis_bin)==0)
                     A_prop(dis,:)=Ah;
@@ -222,39 +184,20 @@ classdef Phot_sys<handle
             Ef2=fftshift(fft(obj.E));
             Ef2=Ef2.*mask;
             E_modulated=ifft(ifftshift(Ef2));      
-            % E_modulated=Ef2;
             
         end
 
         % ====Utility functions=============%
-        function v2=bin_avg(obj,v,n_target)
-            n_bin=floor(length(v)/n_target);
 
-            v2=zeros(1,n_target);
-
-            for i=1:n_target-1
-                v2(i)=mean(v((i-1)*n_bin+1:i*n_bin));
-            end
-            v2(n_target)=mean(v((n_target-1)*n_bin+1:end));
-        end
-
-        function R=Prep_readouts(obj,dis,noise_std_norm)
-            % N_neu2=30;
-   
+        function R=Prep_readouts(obj,dis)  
             dis_idx=floor(dis/obj.dis_save)+1;
             readouts2=permute(obj.readouts,[3,2,1]);
-            % signals2=permute(obj.signals,[3,2,1]);
-
             R=readouts2(:,:,dis_idx);
-            % S=signals2(:,:,dis_idx);
-            
-            % R=R.*obj.c./(obj.wavs(obj.span).^2);
-            
-            % for i=1:size(R,1)
-            %     R(i,:)=obj.IF(R(i,:),obj.osa_res_hz,"flattop");
-            % end
             R=R(:,end:-1:1);
-            
+
+            wavs_interp=obj.wavs_meas(1):obj.osa_res_nm*1e-9:obj.wavs_meas(end);
+            R=interp1(obj.wavs_meas, R', wavs_interp, 'linear');   
+            R=R';
         end
 
         function dt=bandW2pulseW(obj,dwav,shape)   % converts pulse width in wavelength to time
@@ -281,19 +224,6 @@ classdef Phot_sys<handle
                 P_peak=0.8815*P_avg_w/(obj.rep_rate*obj.pulseW);
             elseif(mode=="gaussian")
                 P_peak=0.94*P_avg_w/(obj.rep_rate*obj.pulseW);
-            end
-        end
-
-        function P_avg=peak2avg(obj,P_peak,mode)
-            % P_peak in W, P_avg in dbm
-            if (mode=="sech2")
-                P_avg_w=P_peak.*(obj.rep_rate*obj.pulseW)/0.88;
-                P_avg=10*log10(1000*P_avg_w);
-
-            elseif(mode=="gaussian")
-
-                P_avg_w=P_peak.*(obj.rep_rate*obj.pulseW)/0.94;
-                P_avg=10*log10(1000*P_avg_w);
             end
         end
 
@@ -325,36 +255,6 @@ classdef Phot_sys<handle
     
         end
 
-        function dq=parfor_progress(obj,num)
-            % PARFOR_PROGRESS Displays progress during a parfor loop.
-            %   N  - Total number of iterations in the parfor loop.
-            
-            % Create a DataQueue object to communicate between workers and the main thread
-            dq = parallel.pool.DataQueue;
-            
-            % Initialize the progress count variable
-            progress = 0;
-            
-            % Define the callback function to update progress
-            afterEach(dq, @updateProgress);
-        
-            % This function is called after each worker sends progress
-            function updateProgress(~)
-                progress = progress + 1;
-                pct = (progress / num) * 100;
-                fprintf('Progress: %.2f%%\n', pct);
-            end
-            
-            % Return the DataQueue so that it can be used inside the parfor loop
-            % You will use this DataQueue to send updates from inside your parfor loop.
-        end
-
-        function Ar=rescale_pow(obj,A,new_avg_pow)
-            peak_pow=max(abs(A).^2);
-            A=A./sqrt(peak_pow);  % normalising to peak power=1W
-            Ar=sqrt(obj.avg2peak(new_avg_pow,"sech2")).*A;  % scaling to new power
-        end
-
         function [span,wavs]=get_span_idx(obj,wav_span)
             wav_left=obj.wav_centr-wav_span./2;
             wav_right=obj.wav_centr+wav_span./2;
@@ -371,11 +271,6 @@ classdef Phot_sys<handle
 
             wavs=obj.c./freqs(span);
             wavs=wavs(end:-1:1);
-        end
-
-        function I= takeMeas(obj,field)
-            I=abs(fftshift(fft(field))).^2;
-            I=I(obj.span_meas);
         end
 
         function phi= get_nl_phase(obj,dis) % In multiple of pi

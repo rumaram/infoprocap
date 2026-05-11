@@ -11,6 +11,7 @@ classdef IPC<handle
         dimn;
         threshs;
         samps_arr;
+        K;
     end
 
     methods
@@ -107,6 +108,7 @@ classdef IPC<handle
         end
      
         function [C_hat,dC_hat]=estCap(obj,X,alg)
+            obj.K=size(X,2);
             
             C_hat=obj.fitCap(X,1:size(X,1),alg);
 

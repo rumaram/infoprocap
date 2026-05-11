@@ -1,7 +1,13 @@
 classdef Plotter
     methods(Static)
 
-        function Cm=Cap_mat(obj,C,K,filename)
+        function Cm=Cap_mat(obj,C,filename)
+            arguments
+                obj 
+                C 
+                filename ="no_save"
+            end
+            K=obj.K;
             %=====Calculating=====================
             C_tot=sum(C,"all");
             Cm=zeros(obj.max_deg+1);
@@ -100,8 +106,15 @@ classdef Plotter
 
         end
 
-        function Cd=Cap_deg(obj,C,K,cap_lim,filename)
-            % cap_lim=25;
+        function Cd=Cap_deg(obj,C,filename,cap_lim)
+            arguments
+                obj 
+                C 
+                filename="no_save"
+                cap_lim =25
+            end
+
+            K=obj.K;
             % ===============Calculating===================
             C_tot=sum(C,"all");
             Cd=zeros(obj.max_deg+1,4);    
