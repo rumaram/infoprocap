@@ -69,7 +69,7 @@ classdef IPC<handle
                     l=obj.degrees(bsis,dim);
                     I_sum=0;
                     for L = 0:l
-                        wig_term = Wigner3j([l, l, 2*L], [0, 0, 0]);   
+                        wig_term = infoprocap.Utils.Wigner3j(l, 2*L);   
                         I_sum = I_sum + ((4*L + 1) *(wig_term^4));
                     end
                     term2=term2*((2*l+1)^2)*I_sum;

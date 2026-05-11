@@ -1,6 +1,6 @@
 classdef Utils
     methods(Static)
-        
+
         function dispPerc(i,len)
             if(floor(mod(i,len/100))==0)
                 percent=i*100/len;
@@ -28,6 +28,25 @@ classdef Utils
                     Z(i, j) = bounds(j + 1) - bounds(j) - 1;
                 end
             end
+        end
+
+        function W=Wigner3j(j1,j3)
+            % Special Wigener3j function when j1=j2, and j1,j2,j3 are non negative integers
+            if j3 > 2*j1 || rem(j3,2)
+                W=0;
+                return;
+            end
+
+            t1 = j1-j3;
+            t3 = 2*j1-j3;
+
+            t = max( 0, t1 ) : min( t3, j1 );
+
+            fac_t = -( gammaln(t+1) + 2*gammaln(t-t1+1) + gammaln(t3-t+1) + 2*gammaln(j1-t+1) );
+            fac_j = 0.5 * ( -gammaln(2*j1+j3+2) + gammaln(2*j1-j3+1)+ 4*gammaln(j3+1) + 4*gammaln(j1+1) );
+
+            W = sum( (-1).^t .* exp(fac_t+fac_j ) );
+
         end
 
     end

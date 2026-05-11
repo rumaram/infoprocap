@@ -13,8 +13,6 @@ main_elm_sym.m
 main_ml.m
 plots.m
 test.m
-Wigner3j.m
-
 
 # Other common things to ignore
 *.asv
