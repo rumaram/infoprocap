@@ -4,6 +4,10 @@ A MATLAB toolkit for computing and visualizing **information-processing capacity
 
 All classes are accessed via the `infoprocap` namespace (e.g., `infoprocap.IPC`).
 
+## Installation
+
+Copy the `+infoprocap` folder into your MATLAB project's root directory.
+
 ## Requirements
 
 - MATLAB R2019b or later — no external toolboxes needed
@@ -25,9 +29,6 @@ Constructs a multivariate orthonormal Legendre polynomial basis and computes IPC
 
 ### Constructor
 
-```matlab
-obj = infoprocap.IPC(u, max_deg)
-```
 
 - `u` — `[N × d]` input matrix (values in `[-1, 1]`)
 - `max_deg` — maximum polynomial degree
@@ -90,16 +91,3 @@ Stacked bar chart of capacity by total degree, split into single-feature, 2-feat
 
 ## Example
 
-```matlab
-% 1. Build IPC object
-u = 2*rand(500, 2) - 1;           % [N x d] inputs in [-1, 1]
-ipc = infoprocap.IPC(u, 5);       % max degree 5
-
-% 2. Compute bias-corrected capacity from reservoir readouts X
-C = ipc.fitCap(X, 0, 1);
-disp("Total capacity: " + sum(C));
-
-% 3. Visualize
-infoprocap.Plotter.Cap_mat(ipc, C, ipc.basis_size, "cap_matrix.png");
-infoprocap.Plotter.Cap_deg(ipc, C, ipc.basis_size, 25, "cap_degree.png");
-```
