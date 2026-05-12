@@ -3,8 +3,16 @@ classdef Utils
 
         function dispPerc(i,len)
             if(floor(mod(i,len/100))==0)
-                percent=i*100/len;
-                disp("=== "+percent+" % ===");
+                fprintf('\b\b\b\b\b\b%05.2f%%', i/len*100);
+            end
+        end
+
+        function printProgress(i, len)
+            pct = 100 * i / len;
+            fprintf('\rProgress: %5.1f%%', pct);
+        
+            if i == len
+                fprintf('\n');
             end
         end
 
@@ -30,7 +38,7 @@ classdef Utils
             end
         end
 
-        function W=Wigner3j(j1,j3)
+        function W=W3j(j1,j3)
             % Special Wigener3j function when j1=j2, and j1,j2,j3 are non negative integers
             if j3 > 2*j1 || rem(j3,2)
                 W=0;

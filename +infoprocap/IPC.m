@@ -1,17 +1,16 @@
 classdef IPC<handle
     properties
         progress_display=true;
-        u;          %inputs.
-        u_basis;    % cell array of first max_deg no. of individual legendre basis functions (not products) calculated at input u
-        y;          %calculated product basis functions of inputs u.        
-        max_deg;
-        degrees;
-        basis_size;
-        sample_size;
-        dimn;
-        threshs;
-        samps_arr;
-        K;
+        u;              % inputs.
+        u_basis;        % cell array of first max_deg no. of individual legendre basis functions (not products) calculated at input u
+        y;              % calculated product basis functions of inputs u.        
+        max_deg;        % highest total degree used to generate basis
+        degrees;        % individual degree composition of the product basis
+        basis_size;     % no of basis terms
+        sample_size;    % no of input samples
+        dimn;           % input dimension
+        threshs;        % false positive capacity thresholds
+        K;              % number of readouts
     end
 
     methods
@@ -21,13 +20,15 @@ classdef IPC<handle
             obj.sample_size=size(u,1);
             obj.dimn=size(u,2);
 
-            obj.degrees=infoprocap.Utils.stars_and_bars(obj.max_deg,obj.dimn);  % dsitribution of basis is equivalent to a stars and bars problem
+            % distribution of basis is equivalent to a stars and bars Combinatorial problem
+            obj.degrees=infoprocap.Utils.stars_and_bars(obj.max_deg,obj.dimn);  
             
             obj.basis_size=size(obj.degrees,1);
             obj.y=ones(obj.sample_size,obj.basis_size);
 
-            % Calculating legendre basis using recursive relations
-            obj.u_basis=zeros(obj.sample_size,obj.dimn,obj.max_deg+1);
+            %==Calculating legendre basis using recursive relations==
+            % Normalization: 0.5*integ_{-1}^{1} Pm(x)*Pn(x) dx=delta_{mn}
+            obj.u_basis=zeros(obj.sample_size,obj.dimn,obj.max_deg+1);  % samples x dimensions x degrees
             obj.u_basis(:,:,1) = sqrt(1) * ones(size(obj.u)); 
             obj.u_basis(:,:,2) = sqrt(3) * obj.u;
 
@@ -36,19 +37,24 @@ classdef IPC<handle
                 b = ((n-1) / n) * sqrt((2*n+1) / (2*n-3)); 
                 obj.u_basis(:,:,n+1) =  a .* obj.u .* obj.u_basis(:,:,n) - b .* obj.u_basis(:,:,n-1);
             end
-            %=================================
 
-            % Calculating product basis terms
+            %==Calculating product basis terms==
+            if obj.progress_display
+                disp("Basis initialization Progress: ");
+                disp('     ');
+            end
             for basis=1:obj.basis_size
-                infoprocap.Utils.dispPerc(basis,obj.basis_size);
+                if obj.progress_display
+                    infoprocap.Utils.dispPerc(basis,obj.basis_size);
+                end
                 for q=1:obj.dimn             
                     deg=obj.degrees(basis,q);
                     obj.y(:,basis)=obj.y(:,basis).*obj.u_basis(:,q,deg+1);
                 end             
             end
-            %==================================
-
+            
             if obj.progress_display
+                disp(' ');
                 disp("Basis Initiated");
             end
 
@@ -69,7 +75,7 @@ classdef IPC<handle
                     l=obj.degrees(bsis,dim);
                     I_sum=0;
                     for L = 0:l
-                        wig_term = infoprocap.Utils.Wigner3j(l, 2*L);   
+                        wig_term = infoprocap.Utils.W3j(l, 2*L);   
                         I_sum = I_sum + ((4*L + 1) *(wig_term^4));
                     end
                     term2=term2*((2*l+1)^2)*I_sum;
@@ -80,11 +86,13 @@ classdef IPC<handle
         end
 
         function C=calcCap(obj,readouts,sample_idxs,basis_idxs,use_bias)
-            if sample_idxs==0
-                sample_idxs=1:obj.sample_size;
-            end
-            if basis_idxs==0
-                basis_idxs=1:obj.basis_size;
+            % Calculates raw capacities
+            arguments
+                obj 
+                readouts 
+                sample_idxs =1:obj.sample_size
+                basis_idxs =1:obj.basis_size
+                use_bias =1
             end
 
             if use_bias
@@ -108,6 +116,9 @@ classdef IPC<handle
         end
      
         function [C_hat,dC_hat]=estCap(obj,X,alg)
+            % C_hat = estimated capacity based on the selected algorithm
+            % dC_hat = an approximate uncertainty estimate for capacities by fitting capacities on two halves
+
             obj.K=size(X,2);
             
             C_hat=obj.fitCap(X,1:size(X,1),alg);
@@ -118,18 +129,23 @@ classdef IPC<handle
             dC_hat=(1/2)*abs(sum(C_hat_1,"all")-sum(C_hat_2,"all"));
 
         end
+
         function C=fitCap(obj,X,sample_idxs,alg)
-            if sample_idxs==0
+            % fit capacities based on the selected algorithm
+            arguments
+                obj 
+                X 
                 sample_idxs=1:size(X,1);
+                alg =1
             end
 
             half_len=floor(numel(sample_idxs)/2);
             idxs1=sample_idxs(1:half_len);
             idxs2=sample_idxs(half_len+1:numel(sample_idxs));  
 
-            C_N=obj.calcCap(X,sample_idxs,0,1);       % capacity calculated from whole 
-            C_1=obj.calcCap(X,idxs1,0,1);   % capacity calculated with first half
-            C_2=obj.calcCap(X,idxs2,0,1);   % capacity calculated with second half
+            C_N=obj.calcCap(X,sample_idxs);       % capacity calculated from whole 
+            C_1=obj.calcCap(X,idxs1);   % capacity calculated with first half
+            C_2=obj.calcCap(X,idxs2);   % capacity calculated with second half
 
             C_N_avg=mean([C_1;C_2]);   % average half(N/2) estimate
 
@@ -137,50 +153,48 @@ classdef IPC<handle
 
             C(1)=1;     % Capacity of first basis P0=1 due to column of ones
 
-            if alg==1   % algorithm 1: minimum negative as threshold
-                zero_idx=C<-min(C);
-            elseif alg==2   % algorithm 2: theoretical threshold
+            if alg==1   % algorithm 1: theoretical threshold
                 obj.initThresholds(X(sample_idxs,:));
-                zero_idx=C_N<obj.threshs;
+                zero_idx=C_N<obj.threshs;          
+            elseif alg==2   % algorithm 2: minimum negative as threshold
+                zero_idx=C<-min(C);
             end
 
             C(zero_idx)=0;
          
         end
 
-        function [Cm_arr,Cs_arr]=scanCap(obj,X)
+        function [samps_arr,Cm_arr]=scanCap(obj,X)
+            % scans capacities changing number of samples. Useful to observe asymptotic form
             X=cat(2,X,ones(size(X,1),1));
 
             max_div=floor(obj.sample_size./(size(X,2)))-1;
-            obj.samps_arr=floor(obj.sample_size*(1./(max_div:-1:1)))';
-            obj.samps_arr=unique(obj.samps_arr);
+            samps_arr=floor(obj.sample_size*(1./(max_div:-1:1)))';
+            samps_arr=unique(samps_arr);
 
-            Cm_arr=zeros(length(obj.samps_arr),obj.basis_size); % capacity means
-            Cs_arr=zeros(length(obj.samps_arr),obj.basis_size); % capacity stds
+            Cm_arr=zeros(length(samps_arr),obj.basis_size); % capacity means
             
-            for s=1:length(obj.samps_arr)
+            for s=1:length(samps_arr)
+                
+                disp("Scan Progress");
+                disp('     ');
                 if obj.progress_display
-                    infoprocap.Utils.dispPerc(s,length(obj.samps_arr));
+                    infoprocap.Utils.dispPerc(s,length(samps_arr));
                 end
+                disp(' ');
 
-                N=obj.samps_arr(s);     % number of samples 
-                k_max=floor(obj.sample_size/N); %number of independant subsets
-                % K=floor(obj.sample_size/obj.samps_arr(end));
+                n_samp=samps_arr(s);     % number of samples 
+                n_parts=floor(obj.sample_size/n_samp); %number of independent partitions
+                C_arr=zeros(n_parts,obj.basis_size);
 
-                C_arr=zeros(k_max,obj.basis_size);
+                for p=1:n_parts
+                    batch_idx=(p-1)*n_samp+1:p*n_samp;
 
-                for k=1:k_max
-                    batch_idx=(k-1)*N+1:k*N;
-
-                    Ct=obj.calcCap(X,batch_idx,0,1);
-                    C_arr(k,:)=Ct';
+                    Ct=obj.calcCap(X,batch_idx);
+                    C_arr(p,:)=Ct';
                 end
                 
                 Cm_arr(s,:)=mean(C_arr,1);
-
-                if k_max>1
-                    Cs_arr(s,:)=std(C_arr,1);
-                end
             end
 
         end

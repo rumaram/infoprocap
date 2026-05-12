@@ -19,7 +19,7 @@ classdef Phot_sys<handle
        
         bandW               = 0.6e-9;      % bandwidth in wavelength   
         gamma       = 1.2e-3;
-        beta=[0,-2.3e-26, 0];
+        beta2=-2.3e-26;
 
         % Declarations
         t
@@ -77,10 +77,10 @@ classdef Phot_sys<handle
 
             obj.Ef=fftshift(fft(obj.E));
 
-            obj.L_d=(obj.pulseW/1.76)^2/abs(obj.beta(2));
+            obj.L_d=(obj.pulseW/1.76)^2/abs(obj.beta2);
             obj.L_nl=1/(obj.gamma*obj.peakP);
             
-            D=(1i*obj.beta(2)*(obj.w.^2)/2)-(1i*obj.beta(3)*(obj.w.^3)/6);
+            D=(1i*obj.beta2*(obj.w.^2)/2);
             obj.expD=exp(D*obj.dL/2);
         end
         
@@ -93,7 +93,9 @@ classdef Phot_sys<handle
 
             R=zeros(len_save+1,length(obj.span_meas),sample_size);
             fourrier_norm=(obj.N).^2;
-
+            
+            disp("Photonic system run Progress:");
+            disp('     ');
             for i=1:sample_size           
                 infoprocap.Utils.dispPerc(i,sample_size);
                 modulated_field=obj.Waveshape(X(i,:));
@@ -103,6 +105,8 @@ classdef Phot_sys<handle
 
                 R(:,:,i)=output;  
             end
+            disp(' ');
+
             obj.readouts=R;
             disp("Photonic system run finished");
  
@@ -127,15 +131,9 @@ classdef Phot_sys<handle
                     dis=dis+1;
                 end
             end
-        
-            % fft(time to freq)-> outputs such that the zero frequency is at the start.
-            % fftshift -> align it so that zero frequency is at middle.
-            % ifft(freq to time)-> expects freq signals where 0 frequency is at start.
-            % ifftshift -> uncenter a centered freq domain signal
 
             function Ah=Dispers(A,expD2) % exponential dispersion function, input & output in time domain
                 product_centered=expD2.*fftshift(fft(A));% expD is already centered. fftshift make the 2nd term centered to match.
-
                 Ah=ifft(ifftshift(product_centered));%ifftshift uncenter the product
             end
             
@@ -176,7 +174,7 @@ classdef Phot_sys<handle
 
             span_padded=obj.get_span_idx(obj.wav_span_encode+1e-9); % higher pad span to reduce edge effects
             span_padded2=obj.get_span_idx(obj.wav_span_encode+0.5e-9);  %lower pad span to include overflow outside encoding span
-            % 
+            
             mask2=mask;
             mask2(span_padded)=obj.IF(mask(span_padded),obj.waveshaper_res_hz,"flattop");
             mask(span_padded2)=mask2(span_padded2);
@@ -189,7 +187,7 @@ classdef Phot_sys<handle
 
         % ====Utility functions=============%
 
-        function R=Prep_readouts(obj,dis)  
+        function R=Prep_readouts(obj,dis)  % Prepare readouts at a particular fiber length
             dis_idx=floor(dis/obj.dis_save)+1;
             readouts2=permute(obj.readouts,[3,2,1]);
             R=readouts2(:,:,dis_idx);
@@ -273,7 +271,7 @@ classdef Phot_sys<handle
             wavs=wavs(end:-1:1);
         end
 
-        function phi= get_nl_phase(obj,dis) % In multiple of pi
+        function phi= get_nl_phase(obj,dis) % Get nonlinear phase at a length in multiple of pi
             phi=(1/obj.L_nl)*dis/pi;
         end
 

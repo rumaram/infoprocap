@@ -11,8 +11,6 @@ classdef Plotter
             %=====Calculating=====================
             C_tot=sum(C,"all");
             Cm=zeros(obj.max_deg+1);
-            % Cm(1,1)=C(1);
-            % Cm(1,1)=1;
             if size(obj.u,2)~=2
                 disp("Error: Feature size should be 2 to generate Capacity matrix");
                 return
@@ -106,12 +104,12 @@ classdef Plotter
 
         end
 
-        function Cd=Cap_deg(obj,C,filename,cap_lim)
+        function Cd=Cap_deg(obj,C,filename,y_lim)
             arguments
                 obj 
                 C 
                 filename="no_save"
-                cap_lim =25
+                y_lim =obj.K % y axis limit
             end
 
             K=obj.K;
@@ -154,7 +152,7 @@ classdef Plotter
             xlim([0.5, obj.max_deg+1 + 0.5]);        
             xticks(1:obj.max_deg+1);               % Bar positions
             xticklabels(0:obj.max_deg);        % Labels you want        
-            ylim([0,cap_lim]);
+            ylim([0,y_lim]);
 
             h(1).FaceColor=[248, 237, 140]/255;
             h(2).FaceColor=[211, 230, 113]/255;

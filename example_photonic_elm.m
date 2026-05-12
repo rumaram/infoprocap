@@ -19,8 +19,8 @@ ipc5=infoprocap.IPC(u5,8);   % ipc object for 5 dimensional inputs with max_deg=
 
 %% Initialise photonic system
 phot1=Phot_sys();
-phot1.P_avg=10;
-phot1.L=2;
+phot1.P_avg=6.6;
+phot1.L=5;
 phot1.updateParams();
 
 %% Run photonic system
