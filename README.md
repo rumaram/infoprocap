@@ -1,6 +1,6 @@
 # infoprocap
 
-A MATLAB toolkit for computing and visualizing **information-processing capacity (IPC)** of dynamical systems using a multivariate Legendre polynomial basis.
+A MATLAB toolkit for computing and visualizing **information-processing capacity (IPC)** of stationary physical systems using a multivariate Legendre polynomial basis.
 
 All classes are accessed via the `infoprocap` namespace (e.g., `infoprocap.IPC`).
 
