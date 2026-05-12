@@ -73,7 +73,7 @@ classdef Plotter
                 'LineWidth',1);   % circle outline
 
             % Put fraction text centered inside circle
-            str = sprintf('$\\frac{%g}{%g}$', round(C_tot,2), K);
+            str = sprintf('$\\frac{%g}{%g}$', round(C_tot,2), obj.K+1);
             annotation('textbox', pos, ...
                 'Units','normalized', ...
                 'String', str, ...
@@ -111,8 +111,6 @@ classdef Plotter
                 filename="no_save"
                 y_lim =obj.K % y axis limit
             end
-
-            K=obj.K;
             % ===============Calculating===================
             C_tot=sum(C,"all");
             Cd=zeros(obj.max_deg+1,4);    
@@ -178,7 +176,7 @@ classdef Plotter
                 'LineWidth',1);   % circle outline
 
             % Put fraction text centered inside circle
-            str = sprintf('$\\frac{%g}{%g}$', round(C_tot,2), K);
+            str = sprintf('$\\frac{%g}{%g}$', round(C_tot,2), obj.K+1);
             annotation('textbox', pos, ...
                 'Units','normalized', ...
                 'String', str, ...

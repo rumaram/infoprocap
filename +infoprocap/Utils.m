@@ -7,15 +7,6 @@ classdef Utils
             end
         end
 
-        function printProgress(i, len)
-            pct = 100 * i / len;
-            fprintf('\rProgress: %5.1f%%', pct);
-        
-            if i == len
-                fprintf('\n');
-            end
-        end
-
         function Z = stars_and_bars(n, k)
             % Generates all ways to distribute n stars and k bars, k bars=k+1 sections
 

@@ -155,9 +155,9 @@ classdef IPC<handle
 
             if alg==1   % algorithm 1: theoretical threshold
                 obj.initThresholds(X(sample_idxs,:));
-                zero_idx=C_N<obj.threshs;          
+                zero_idx=C_N<obj.threshs;   % threshold compared with raw capacities.   
             elseif alg==2   % algorithm 2: minimum negative as threshold
-                zero_idx=C<-min(C);
+                zero_idx=C<-min(C);         % threshold compared with fitted capacities.
             end
 
             C(zero_idx)=0;

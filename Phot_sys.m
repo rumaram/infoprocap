@@ -193,7 +193,7 @@ classdef Phot_sys<handle
             R=readouts2(:,:,dis_idx);
             R=R(:,end:-1:1);
 
-            wavs_interp=obj.wavs_meas(1):obj.osa_res_nm*1e-9:obj.wavs_meas(end);
+            wavs_interp=obj.wavs_meas(1):obj.osa_res_nm*1e-9:obj.wavs_meas(end);    % matching OSA resolution
             R=interp1(obj.wavs_meas, R', wavs_interp, 'linear');   
             R=R';
         end
