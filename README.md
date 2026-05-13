@@ -77,10 +77,10 @@ Static class. Both methods accept a `filename` argument:
 | `"no_save"` | Display without saving |
 | Any string | Save to file at 300 DPI |
 
-**`Cm = Plotter.Cap_mat(obj, C, filename)`**
+**`Cm = Plotter.capMat(obj, C, filename)`**
 2D heatmap of capacity over polynomial degrees. Requires `dimn = 2`. [Figure 1(a)]
 
-**`Cd = Plotter.Cap_deg(obj, C, filename,y_lim)`**
+**`Cd = Plotter.capBar(obj, C, filename,y_lim)`**
 Stacked bar chart of capacity by total degree, split into single-feature, 2-feature cross, and higher-order interaction terms.  [Figure 1(b)]
 
 ---
