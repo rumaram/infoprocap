@@ -96,4 +96,9 @@ Stacked bar chart of capacity by total degree, split into single-feature, 2-feat
 ---
 
 ## Example
+```matlab
+ipc1 = infoprocap.IPC(u,8);              % initialize IPC object with input u and maximum degree of basis=8
+[C,dC] = infoprocap.estCap(X,1);        % estimate capacities C with readouts X and Algorithm 1. dC is an approximate uncertainty measure of capacities
+infoprocap.Plotter.capBar(ipc1,C);      % plot capacity bar plot
+```
 See example_photonic_elm.m for a basic example with a photonic system.

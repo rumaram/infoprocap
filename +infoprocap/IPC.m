@@ -55,7 +55,7 @@ classdef IPC<handle
             
             if obj.progress_display
                 disp(' ');
-                disp("Basis Initiated");
+                disp("Basis Initialized");
             end
 
         end
@@ -118,9 +118,9 @@ classdef IPC<handle
         function [C_hat,dC_hat]=estCap(obj,X,alg)
             % C_hat = estimated capacity based on the selected algorithm
 
-            % dC_hat = an approximate uncertainty estimate for sum of capacities by fitting capacities on two halves.
+            % dC_hat = an approximate uncertainty estimate of by fitting capacities on two independent halves.
             % dC_hat is not a theoretical estimate, and not used in the paper.
-            % It can be used as a way to check how reliable the sum of estimated capacities are.
+            % It can be used as a way to check how reliable the estimated capacities are.
 
             obj.K=size(X,2);
             
@@ -129,7 +129,7 @@ classdef IPC<handle
             C_hat_1=obj.fitCap(X,1:floor(size(X,1)/2),alg);
             C_hat_2=obj.fitCap(X,floor(size(X,1)/2)+1:size(X,1),alg);
 
-            dC_hat=(1/2)*abs(sum(C_hat_1,"all")-sum(C_hat_2,"all"));
+            dC_hat=(1/2)*abs(C_hat_1-C_hat_2);
 
         end
 
