@@ -52,7 +52,7 @@ Constructs a multivariate orthonormal Legendre polynomial basis and computes IPC
 Raw capacity from readouts `X`
 
 **`C_hat = estCap(X,alg)`**
-Fitted capacity after asymptotic fitting and false-positive thresholding.
+Estimated capacity after asymptotic fitting and false-positive thresholding.
 - `alg = 1` — theoretical threshold
 - `alg = 2` — threshold by minimum-negative value 
 
