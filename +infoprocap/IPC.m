@@ -2,13 +2,13 @@ classdef IPC<handle
     properties
         progress_display=true;
         u;              % inputs.
-        u_basis;        % cell array of first max_deg no. of individual legendre basis functions (not products) calculated at input u
+        u_basis;        % 3d array of first max_deg no. of individual legendre basis functions (not products) calculated at all inputs u
         y;              % calculated product basis functions of inputs u.        
         max_deg;        % highest total degree used to generate basis
-        degrees;        % individual degree composition of the product basis
+        degrees;        % individual degree composition of the product basis terms
         basis_size;     % no of basis terms
         sample_size;    % no of input samples
-        dimn;           % input dimension
+        dimn;           % input dimensions
         threshs;        % false positive capacity thresholds
         K;              % number of readouts
     end

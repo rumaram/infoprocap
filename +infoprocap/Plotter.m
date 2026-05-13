@@ -81,7 +81,7 @@ classdef Plotter
                 'HorizontalAlignment','center', ...
                 'VerticalAlignment','middle', ...
                 'EdgeColor','none', ...
-                'FontSize',16);
+                'FontSize',18);
             %==============================
 
             xlabel("Degree of u_1",'Interpreter', 'tex');
@@ -92,8 +92,8 @@ classdef Plotter
             ax.FontSize = 14;
             set(gca, 'XTick', 1:size(Cm,2), 'XTickLabel', 0:size(Cm,2)-1);
             set(gca, 'YTick', 1:size(Cm,1), 'YTickLabel', 0:size(Cm,1)-1);
-            ax.XLabel.FontSize=16;
-            ax.YLabel.FontSize=16;
+            ax.XLabel.FontSize=18;
+            ax.YLabel.FontSize=18;
             axis square;
 
             set(gcf, 'Units', 'pixels', 'Position', [100 100 600 600]);
