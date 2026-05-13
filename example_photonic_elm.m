@@ -19,18 +19,18 @@ ipc5=infoprocap.IPC(u5,8);   % ipc object for 5 dimensional inputs with max_deg=
 
 %% Initialise photonic system
 phot1=Phot_sys();
-phot1.P_avg=6.6;
-phot1.L=5;
+phot1.P_avg=6.6;  % average power of the laser
+phot1.L=5;    % length of the fiber
 phot1.updateParams();
 
 %% Run photonic system
 u_rep=repmat(u2,1,10);    % repeating features 10 times
 phot1.run(u_rep);
-X2=phot1.Prep_readouts(2);
+X2=phot1.Prep_readouts(5);  % measure readouts at 5m
 
 u_rep=repmat(u5,1,4);    % repeating features 4 times
 phot1.run(u_rep);
-X5=phot1.Prep_readouts(2);
+X5=phot1.Prep_readouts(5);  % measure readouts at 5m
 
 %% Calculate capacity
 [C2,~]=ipc2.estCap(X2,2);
