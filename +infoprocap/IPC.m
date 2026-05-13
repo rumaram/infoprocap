@@ -20,13 +20,13 @@ classdef IPC<handle
             obj.sample_size=size(u,1);
             obj.dimn=size(u,2);
 
-            % distribution of basis is equivalent to a stars and bars Combinatorial problem
+            % distribution of degrees of product basis is equivalent to a stars and bars Combinatorial problem
             obj.degrees=infoprocap.Utils.stars_and_bars(obj.max_deg,obj.dimn);  
             
             obj.basis_size=size(obj.degrees,1);
             obj.y=ones(obj.sample_size,obj.basis_size);
 
-            %==Calculating legendre basis using recursive relations==
+            %==Calculating legendre basis using recursive relations calculated at all input samples==
             % Normalization: 0.5*integ_{-1}^{1} Pm(x)*Pn(x) dx=delta_{mn}
             obj.u_basis=zeros(obj.sample_size,obj.dimn,obj.max_deg+1);  % samples x dimensions x degrees
             obj.u_basis(:,:,1) = sqrt(1) * ones(size(obj.u)); 
@@ -117,7 +117,10 @@ classdef IPC<handle
      
         function [C_hat,dC_hat]=estCap(obj,X,alg)
             % C_hat = estimated capacity based on the selected algorithm
-            % dC_hat = an approximate uncertainty estimate for capacities by fitting capacities on two halves
+
+            % dC_hat = an approximate uncertainty estimate for sum of capacities by fitting capacities on two halves.
+            % dC_hat is not a theoretical estimate, and not used in the paper.
+            % It can be used as a way to check how reliable the sum of estimated capacities are.
 
             obj.K=size(X,2);
             
@@ -174,14 +177,16 @@ classdef IPC<handle
 
             Cm_arr=zeros(length(samps_arr),obj.basis_size); % capacity means
             
-            for s=1:length(samps_arr)
-                
-                disp("Scan Progress");
+            if obj.progress_display
+                disp("Scan Progress: ");
                 disp('     ');
+            end
+            for s=1:length(samps_arr)
+                     
                 if obj.progress_display
                     infoprocap.Utils.dispPerc(s,length(samps_arr));
                 end
-                disp(' ');
+                
 
                 n_samp=samps_arr(s);     % number of samples 
                 n_parts=floor(obj.sample_size/n_samp); %number of independent partitions
@@ -196,7 +201,8 @@ classdef IPC<handle
                 
                 Cm_arr(s,:)=mean(C_arr,1);
             end
-
+            disp(' ');
+            disp("Capacity scan finished");
         end
 
     end

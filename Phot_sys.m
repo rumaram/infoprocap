@@ -72,8 +72,8 @@ classdef Phot_sys<handle
             obj.wavs=obj.c./freqs;
             obj.wavs=obj.wavs(end:-1:1);
 
-            [obj.span_encode,~]=obj.get_span_idx(obj.wav_span_encode);
-            [obj.span_meas,obj.wavs_meas]=obj.get_span_idx(obj.wav_span_meas);          
+            [obj.span_encode,~]=obj.getSpanidx(obj.wav_span_encode);
+            [obj.span_meas,obj.wavs_meas]=obj.getSpanidx(obj.wav_span_meas);          
 
             obj.Ef=fftshift(fft(obj.E));
 
@@ -98,8 +98,8 @@ classdef Phot_sys<handle
             disp('     ');
             for i=1:sample_size           
                 infoprocap.Utils.dispPerc(i,sample_size);
-                modulated_field=obj.Waveshape(X(i,:));
-                propagated_field=obj.Prop(modulated_field,obj.L);
+                modulated_field=obj.waveShape(X(i,:));
+                propagated_field=obj.propLight(modulated_field,obj.L);
                 propagated_spectrum= fftshift(fft(propagated_field,[],2),2);
                 output=abs(propagated_spectrum(:,obj.span_meas)).^2./(fourrier_norm);
 
@@ -113,7 +113,7 @@ classdef Phot_sys<handle
         end
 
 
-        function A_prop=Prop(obj,A,distance)  %Split-step fourrier propagation
+        function A_prop=propLight(obj,A,distance)  %Split-step fourrier propagation
             len_prop=length(0:obj.dL:distance);    % number of lengths to propagate
             len_save=floor(distance/obj.dis_save);    % number of lengths to save
             dis_bin=floor(obj.dis_save/obj.dL);     % bin size corresponding to save distance
@@ -145,9 +145,9 @@ classdef Phot_sys<handle
         
         end
 
-        function E_modulated=Waveshape(obj,x)
+        function E_modulated=waveShape(obj,x)
             N_span_encode=length(obj.span_encode);
-            fill_idx=obj.fillbin(N_span_encode,length(x));
+            fill_idx=obj.fillBin(N_span_encode,length(x));
             
             mask=ones(1,N_span_encode);
             
@@ -172,11 +172,11 @@ classdef Phot_sys<handle
 
             mask=mask_amp.*exp(1i*mask_ph);
 
-            span_padded=obj.get_span_idx(obj.wav_span_encode+1e-9); % higher pad span to reduce edge effects
-            span_padded2=obj.get_span_idx(obj.wav_span_encode+0.5e-9);  %lower pad span to include overflow outside encoding span
+            span_padded=obj.getSpanidx(obj.wav_span_encode+1e-9); % higher pad span to reduce edge effects
+            span_padded2=obj.getSpanidx(obj.wav_span_encode+0.5e-9);  %lower pad span to include overflow outside encoding span
             
             mask2=mask;
-            mask2(span_padded)=obj.IF(mask(span_padded),obj.waveshaper_res_hz,"flattop");
+            mask2(span_padded)=obj.applyIF(mask(span_padded),obj.waveshaper_res_hz,"flattop");
             mask(span_padded2)=mask2(span_padded2);
 
             Ef2=fftshift(fft(obj.E));
@@ -187,7 +187,7 @@ classdef Phot_sys<handle
 
         % ====Utility functions=============%
 
-        function R=Prep_readouts(obj,dis)  % Prepare readouts at a particular fiber length
+        function R=prepReadouts(obj,dis)  % Prepare readouts at a particular fiber length
             dis_idx=floor(dis/obj.dis_save)+1;
             readouts2=permute(obj.readouts,[3,2,1]);
             R=readouts2(:,:,dis_idx);
@@ -225,7 +225,7 @@ classdef Phot_sys<handle
             end
         end
 
-        function C=fillbin(obj,lenA,lenB)   % return indices of B that fills A by uniformly repeating B. (lenA>lenB)
+        function C=fillBin(obj,lenA,lenB)   % return indices of B that fills A by uniformly repeating B. (lenA>lenB)
     
             C=zeros(1,lenA);
         
@@ -253,7 +253,7 @@ classdef Phot_sys<handle
     
         end
 
-        function [span,wavs]=get_span_idx(obj,wav_span)
+        function [span,wavs]=getSpanidx(obj,wav_span)
             wav_left=obj.wav_centr-wav_span./2;
             wav_right=obj.wav_centr+wav_span./2;
             freq_left=obj.c/wav_right;
@@ -271,11 +271,11 @@ classdef Phot_sys<handle
             wavs=wavs(end:-1:1);
         end
 
-        function phi= get_nl_phase(obj,dis) % Get nonlinear phase at a length in multiple of pi
+        function phi= getNLphase(obj,dis) % Get nonlinear phase at a length in multiple of pi
             phi=(1/obj.L_nl)*dis/pi;
         end
 
-        function B=IF(obj,A,filter_res,type)    % instrument filter (gaussian convolution)
+        function B=applyIF(obj,A,filter_res,type)    % instrument filter (gaussian convolution)
             %filter_res= resolution of the filter in Hz
             
             df=obj.dw/(2*pi);

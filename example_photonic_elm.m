@@ -26,19 +26,19 @@ phot1.updateParams();
 %% Run photonic system
 u_rep=repmat(u2,1,10);    % repeating features 10 times
 phot1.run(u_rep);
-X2=phot1.Prep_readouts(5);  % measure readouts at 5m
+X2=phot1.prepReadouts(5);  % measure readouts at 5m
 
 u_rep=repmat(u5,1,4);    % repeating features 4 times
 phot1.run(u_rep);
-X5=phot1.Prep_readouts(5);  % measure readouts at 5m
+X5=phot1.prepReadouts(5);  % measure readouts at 5m
 
-%% Calculate capacity
-[C2,~]=ipc2.estCap(X2,2);
-[C5,~]=ipc5.estCap(X5,2);
+%% Calculate capacity with algorithm 1
+[C2,~]=ipc2.estCap(X2,1);
+[C5,~]=ipc5.estCap(X5,1);
 
 %% Plot Capacity plots
-Cmat=infoprocap.Plotter.Cap_mat(ipc2,C2);
-Cd=infoprocap.Plotter.Cap_deg(ipc5,C5);
+Cmat=infoprocap.Plotter.capMat(ipc2,C2);   % Capacity matrix
+Cd=infoprocap.Plotter.capBar(ipc5,C5);     % Capacity barplot
 
 
 

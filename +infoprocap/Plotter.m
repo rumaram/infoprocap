@@ -1,7 +1,7 @@
 classdef Plotter
     methods(Static)
 
-        function Cm=Cap_mat(obj,C,filename)
+        function Cm=capMat(obj,C,filename)
             arguments
                 obj 
                 C 
@@ -104,7 +104,7 @@ classdef Plotter
 
         end
 
-        function Cd=Cap_deg(obj,C,filename,y_lim)
+        function Cd=capBar(obj,C,filename,y_lim)
             arguments
                 obj 
                 C 
