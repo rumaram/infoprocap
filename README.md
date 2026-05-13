@@ -1,6 +1,6 @@
 # infoprocap
 
-![Alt text](./images/visualisations.jpg)
+![IPC Visualisations](./images/visualisations.jpg)
 
 A MATLAB toolkit for computing and visualizing **Information Processing Capacity (IPC)** of stationary physical systems using a multivariate Legendre polynomial basis.
 
