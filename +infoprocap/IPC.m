@@ -111,7 +111,7 @@ classdef IPC<handle
 
             Rprod=(1/N)*sum(R.^2,1);
             % ymean=mean(yy.^2,1);
-            % C=Rprod./ymean;
+            % C=Rprod./ymean;   % normalization ignored since E[y^2]=1
             C=Rprod;
         end
      
