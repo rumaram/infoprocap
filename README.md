@@ -57,10 +57,10 @@ Fitted capacity after asymptotic fitting and false-positive thresholding.
 - `alg = 2` — threshold by minimum-negative value 
 
 **`[C_hat, dC_hat] = estCap(obj, X, alg)`**
-Capacity with split-half uncertainty estimate (`dC_hat`).
+Fitted Capacity with split-half uncertainty estimate (`dC_hat`).
 
 **`[samps_arr,Cm_arr] = scanCap(obj, X)`**
-Scans capacity vs. number of training samples. Useful to visualise the asymptotic form of capacities.
+Scans raw capacity vs. number of training samples. Useful to visualise the asymptotic form of capacities.
 
 **`initThresholds(obj, X, sample_idxs)`**
 Pre-computes theoretical thresholds per basis term (required for `alg = 1`).
