@@ -48,21 +48,18 @@ Constructs a multivariate orthonormal Legendre polynomial basis and computes IPC
 
 ### Methods
 
-**`C = calcCap(obj, X, sample_idxs, basis_idxs, use_bias)`**
+**`C = calcCap(X)`**
 Raw capacity from readouts `X`
 
-**`C = fitCap(obj, X, sample_idxs, alg)`**
+**`C_hat = estCap(X,alg)`**
 Fitted capacity after asymptotic fitting and false-positive thresholding.
 - `alg = 1` — theoretical threshold
 - `alg = 2` — threshold by minimum-negative value 
 
-**`[C_hat, dC_hat] = estCap(obj, X, alg)`**
-Fitted Capacity with split-half uncertainty estimate (`dC_hat`).
-
 **`[samps_arr,Cm_arr] = scanCap(obj, X)`**
-Scans raw capacity vs. number of samples. Useful to visualise the asymptotic form of capacities.
+Scans Number of samples Vs Raw Capacity. Useful to visualise the asymptotic form of capacities.
 
-**`initThresholds(obj, X, sample_idxs)`**
+**`initThresholds(X)`**
 Pre-computes theoretical thresholds per basis term (required for `alg = 1`).
 
 ---
@@ -77,10 +74,10 @@ Static class. Both methods accept a `filename` argument:
 | `"no_save"` | Display without saving |
 | Any string | Save to file at 300 DPI |
 
-**`Cm = Plotter.capMat(obj, C, filename)`**
+**`Cm = Plotter.capMat(C, filename)`**
 2D heatmap of capacity over polynomial degrees. Requires `dimn = 2`. [Figure 1(a)]
 
-**`Cd = Plotter.capBar(obj, C, filename,y_lim)`**
+**`Cd = Plotter.capBar(C, filename,y_lim)`**
 Stacked bar chart of capacity by total degree, split into single-feature, 2-feature cross, and higher-order interaction terms.  [Figure 1(b)]
 
 ---
