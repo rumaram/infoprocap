@@ -123,6 +123,7 @@ classdef IPC<handle
                 alg =1
                 sample_idxs=1:size(X,1);         
             end
+            obj.K=size(X,2);
 
             half_len=floor(numel(sample_idxs)/2);
             idxs1=sample_idxs(1:half_len);
@@ -146,6 +147,7 @@ classdef IPC<handle
             end
 
             C(zero_idx)=0;
+            C(C<0)=0;
          
         end
 
