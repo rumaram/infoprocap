@@ -102,3 +102,9 @@ ipc1 = infoprocap.IPC(u,8);              % initialize IPC object with input u an
 infoprocap.Plotter.capBar(ipc1,C);      % plot capacity bar plot
 ```
 See example_photonic_elm.m for a basic example with a photonic system.
+
+---
+
+## References
+
+[1] Joni Dambre, David Verstraeten, Benjamin Schrauwen, and Serge Massar. ''[Information processing capacity of dynamical systems.](https://www.nature.com/articles/srep00514)'' Scientific reports 2.1 (2012): 1-7.
