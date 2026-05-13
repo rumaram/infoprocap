@@ -114,32 +114,14 @@ classdef IPC<handle
             % C=Rprod./ymean;   % normalization ignored since E[y^2]=1
             C=Rprod;
         end
-     
-        function [C_hat,dC_hat]=estCap(obj,X,alg)
-            % C_hat = estimated capacity based on the selected algorithm
 
-            % dC_hat = an approximate uncertainty estimate of by fitting capacities on two independent halves.
-            % dC_hat is not a theoretical estimate, and not used in the paper.
-            % It can be used as a way to check how reliable the estimated capacities are.
-
-            obj.K=size(X,2);
-            
-            C_hat=obj.fitCap(X,1:size(X,1),alg);
-
-            C_hat_1=obj.fitCap(X,1:floor(size(X,1)/2),alg);
-            C_hat_2=obj.fitCap(X,floor(size(X,1)/2)+1:size(X,1),alg);
-
-            dC_hat=(1/2)*abs(C_hat_1-C_hat_2);
-
-        end
-
-        function C=fitCap(obj,X,sample_idxs,alg)
+        function C=estCap(obj,X,alg,sample_idxs)
             % fit capacities based on the selected algorithm
             arguments
                 obj 
                 X 
-                sample_idxs=1:size(X,1);
                 alg =1
+                sample_idxs=1:size(X,1);         
             end
 
             half_len=floor(numel(sample_idxs)/2);
