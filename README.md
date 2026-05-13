@@ -3,7 +3,7 @@
 ![IPC Visualisations](./images/visualisations.jpg)
 *Figure 1: IPC Visualizations
 
-A MATLAB toolkit for computing and visualizing **Information Processing Capacity (IPC)** of stationary physical systems using a multivariate Legendre polynomial basis.
+A MATLAB toolkit for computing **Information Processing Capacity (IPC)** of stationary physical systems with limited experimental data using a multivariate Legendre polynomial basis.
 
 All classes are accessed via the `infoprocap` namespace (e.g., `infoprocap.IPC`).
 
