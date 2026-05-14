@@ -100,6 +100,7 @@ classdef Plotter
 
             if filename~="no_save"
                 exportgraphics(gcf, filename, 'Resolution', 300);
+                fprintf('Plot saved to: %s\n', filename);
             end
 
         end
@@ -196,6 +197,7 @@ classdef Plotter
             set(gcf,'Units','pixels','Position',[100 100 600 600]);  % [left bottom width height]
             if filename~="no_save"
                 exportgraphics(gcf, filename, 'Resolution', 300);
+                fprintf('Plot saved to: %s\n', filename);
             end
         end
 
