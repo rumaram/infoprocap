@@ -33,12 +33,15 @@ phot1.run(u_rep);
 X5=phot1.prepReadouts(5);  % measure readouts at 5m
 
 %% Calculate capacity with algorithm 1
-[C2,~]=ipc2.estCap(X2,1);
-[C5,~]=ipc5.estCap(X5,1);
+C2=ipc2.estCap(X2,1);
+C5=ipc5.estCap(X5,1);
 
 %% Plot Capacity plots
 Cmat=infoprocap.Plotter.capMat(ipc2,C2);   % Capacity matrix
-Cd=infoprocap.Plotter.capBar(ipc5,C5);     % Capacity barplot
+Cd=infoprocap.Plotter.capBar(ipc5,C5,"no_save",25);     % Capacity barplot
+%% Save results as CSV
+ipc2.exportCSV(C2,"ipc2_result.csv");
+ipc5.exportCSV(C5,"ipc5_result.csv");
 
 
 

@@ -14,6 +14,8 @@ main_elm_sym.m
 main_ml.m
 plots.m
 test.m
+ipc2_result.csv
+ipc5_result.csv
 
 # Other common things to ignore
 *.asv
