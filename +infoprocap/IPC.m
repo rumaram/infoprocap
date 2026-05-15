@@ -166,48 +166,33 @@ classdef IPC<handle
          
         end
 
-        function [samps_arr,Cm_arr]=scanCap(obj,X)
+        function [samps_arr,C_arr]=scanCap(obj,X)
             % scans capacities changing number of samples. 
             % Useful to observe asymptotic form of capacities.
-
+            obj.K=size(X,2);
             X=cat(2,X,ones(size(X,1),1));
 
-            max_div=floor(obj.sample_size./(size(X,2)))-1;
-            samps_arr=floor(obj.sample_size*(1./(max_div:-1:1)))';
-            samps_arr=unique(samps_arr);
+            samps_arr=obj.K+1:1:obj.sample_size;
+            C_arr=zeros(length(samps_arr),obj.basis_size); % capacity means
 
-            Cm_arr=zeros(length(samps_arr),obj.basis_size); % capacity means
-            
             if obj.disp_prog
                 disp("Scan Progress: ");
                 disp('     ');
             end
             for s=1:length(samps_arr)
-                     
+
                 if obj.disp_prog
                     infoprocap.Utils.dispPerc(s,length(samps_arr));
-                end
-                
-
-                n_samp=samps_arr(s);     % number of samples 
-                n_parts=floor(obj.sample_size/n_samp); %number of independent partitions
-                C_arr=zeros(n_parts,obj.basis_size);
-
-                for p=1:n_parts
-                    batch_idx=(p-1)*n_samp+1:p*n_samp;
-
-                    Ct=obj.calcCap(X,batch_idx);
-                    C_arr(p,:)=Ct';
-                end
-                
-                Cm_arr(s,:)=mean(C_arr,1);
+                end              
+                samps_idx=1:samps_arr(s);
+                C_arr(s,:)=obj.calcCap(X,samps_idx);
             end
             disp(' ');
             disp("Capacity scan finished");
         end
 
         function idx=nameToidx(obj,name)    % converts basis name to corresponding index
-            idx=find(obj.basis_names,name);
+            idx=find(obj.basis_names==name);
         end
 
         function name=idxToname(obj,idx)    % converts basis index to name of the basis term
