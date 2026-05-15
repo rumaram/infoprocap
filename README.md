@@ -59,12 +59,12 @@ ipc = infoprocap.IPC(u, max_deg)
 
 ### Methods
 
-#### `C = calcCap(readouts, sample_idxs, basis_idxs, use_bias)`
+#### `C = calcCap(X, sample_idxs, basis_idxs, use_bias)`
 
 Computes raw capacities from a readout matrix.
 
 **Arguments**
-- `readouts` — readout matrix
+- `X` — readout matrix
 - `sample_idxs` — optional subset of sample indices, default: all samples
 - `basis_idxs` — optional subset of basis indices, default: all basis terms
 - `use_bias` — optional flag to append a bias column of ones, default: `1`
