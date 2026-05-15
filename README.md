@@ -44,16 +44,16 @@ ipc = infoprocap.IPC(u, max_deg)
 
 | Property | Description |
 |---|---|
+| `sample_size` | Number of input samples |
+| `basis_size` | Number of basis terms |
+| `dimn` | Number of input dimensions |
+| `max_deg` | Maximum total polynomial degree |
+| `K` | Number of readouts used in the most recent estimation or scan |
 | `u` | Input samples |
 | `u_basis` | Individual Legendre basis values for every sample, dimension, and degree |
 | `y` | Evaluated multivariate product basis terms |
-| `max_deg` | Maximum total polynomial degree |
 | `degrees` | Multi-index degree table for the product basis |
-| `basis_size` | Number of basis terms |
-| `sample_size` | Number of input samples |
-| `dimn` | Number of input dimensions |
 | `threshs` | False-positive capacity thresholds |
-| `K` | Number of readouts used in the most recent estimation or scan |
 | `basis_names` | Human-readable names of basis terms |
 | `disp_prog` | Flag for command-window progress display |
 
