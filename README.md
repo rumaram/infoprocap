@@ -131,13 +131,13 @@ Creates a stacked bar chart of capacity by total degree, split into single-featu
 ## Example
 
 ```matlab
-% Input samples in [-1, 1]
+% Initialize IPC object from inputs u and with a Legendre product basis with maximum degree=8
 ipc = infoprocap.IPC(u, 8);
 
-% Raw capacities
+% Raw capacities from readouts X
 C_raw = ipc.calcCap(X);
 
-% Estimated capacities with theoretical thresholding
+% Estimated capacities with theoretical thresholding (Algorithm 1)
 C_est = ipc.estCap(X, 1);
 
 % Basis lookup
