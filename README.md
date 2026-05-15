@@ -114,11 +114,11 @@ Both plotting methods accept a `filename` argument with the following behavior:
 
 ### `Cm = Plotter.capMat(C, filename)`
 
-Creates a 2D heatmap of capacity over polynomial degrees. Requires `dimn = 2`.
+Creates a 2D heatmap of capacity over polynomial degrees. Requires `dimn = 2`. Figure 1 (a)
 
 ### `Cd = Plotter.capBar(C, filename, y_lim)`
 
-Creates a stacked bar chart of capacity by total degree, split into single-feature, two-feature cross, and higher-order interaction terms.
+Creates a stacked bar chart of capacity by total degree, split into single-feature, two-feature cross, and higher-order interaction terms. Figure 1 (b)
 
 ## Utils class
 
