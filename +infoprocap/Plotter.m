@@ -1,13 +1,16 @@
 classdef Plotter
+% Class implementing IPC plotting functions.
+% Part of the Matlab toolkit 'infoprocap' by Rahul Uma Ramachandran (github.com/rumaram/infoprocap)
     methods(Static)
 
         function Cm=capMat(obj,C,filename)
+            % Plots Capacity matrix from C
             arguments
                 obj 
                 C 
                 filename ="no_save"
             end
-            K=obj.K;
+
             %=====Calculating=====================
             C_tot=sum(C,"all");
             Cm=zeros(obj.max_deg+1);
@@ -106,6 +109,7 @@ classdef Plotter
         end
 
         function Cd=capBar(obj,C,filename,y_lim)
+            % Plots capacity bar plot from C. y_lim is the y_axis limit.
             arguments
                 obj 
                 C 

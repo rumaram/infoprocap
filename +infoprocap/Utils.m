@@ -1,4 +1,6 @@
 classdef Utils
+% Class implementing utility functions required for IPC class.
+% Part of the Matlab toolkit 'infoprocap' by Rahul Uma Ramachandran (github.com/rumaram/infoprocap)
     methods(Static)
 
         function dispPerc(i,len)

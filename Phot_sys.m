@@ -1,44 +1,47 @@
 classdef Phot_sys<handle
+% Class implementing the photonics system simulation and utility functions.
 
+% The photonic system consists of a pulsed laser encoded with input on its
+% spectrum propagating through an optical fiber.
+
+% by Rahul Uma Ramachandran (github.com/rumaram/infoprocap)
     properties
 
-        N           = 2^14;
-        dL     = 50e-2;    % Small segment for each step of split-step fourier method
-        L=5;    % Total propagation length
-        T=1000e-12;
-        dis_save=50e-2;  % distance in between to save results 
-        P_avg = 6.6;      % Avg_power in dBm at the output
+        % Simulation constants
+        T= 1000e-12;                    % Simulation time window
+        N= 2^14;                        % Number of simulation samples in the time window   
+        dL= 50e-2;                      % Small segment for each step of split-step fourier method
+        dis_save=50e-2;                 % distance in between to save results 
 
-        wav_centr=1550e-9;
-        wav_span_encode=2.5e-9;
-        wav_span_meas=3.5e-9;  % wavelength span to take measurements
-        rep_rate=10e6;
-        
-        waveshaper_res_hz=12e9;    % frequency resolution of waveshaper in Hz
-        osa_res_nm=0.05;
-       
-        bandW               = 0.6e-9;      % bandwidth in wavelength   
-        gamma       = 1.2e-3;
-        beta2=-2.3e-26;
+        % Physical parameters
+        L= 5;                           % Total propagation length(m)         
+        P_avg = 6.6;                    % Avg_power at the output(dBm)
+        wav_centr=1550e-9;              % Central wavelength of laser(m)
+        wav_span_encode=2.5e-9;         % Encoding wavelength span(m)
+        wav_span_meas=3.5e-9;           % Measurement wavelength span(m)
+        rep_rate=10e6;                  % Repetition rate of laser(Hz)       
+        waveshaper_freq_res=12e9;       % frequency resolution of waveshaper(Hz)
+        osa_wav_res=0.05e-9;            % wavelength resolution of OSA(m)     
+        bandW= 0.6e-9;                  % bandwidth in wavelength(m)
+        gamma       = 1.2e-3;           % nonlinear parameter
+        beta2=-2.3e-26;                 % dispersion parameter
 
         % Declarations
-        t
-        L_d;
-        L_nl;
-        pulseW;     %fwhm
-        peakP; 
-        span_encode;
-        span_meas;
-        E;
-        Ef; 
-        expD; % Dispersion operator
-        wavs;    % to store wavelengths array centered at wav_centr
-        wavs_meas;  % wavelengths of measured span
-
-        readouts;   % Stores spectral intensity readouts at each length step
-        X;
-        w;
-        dw;
+        t;                              % time grid
+        w;                              % frequency grid
+        dw;                             % frequency interval
+        L_d;                            % dispersion length
+        L_nl;                           % nonlinear length
+        pulseW;                         % pulse width fwhm
+        peakP;                          % peak power
+        span_encode;                    % encoding span indexes
+        span_meas;                      % measurement span indexes
+        E;                              % Field
+        Ef;                             % Spectrum
+        expD;                           % Dispersion operator
+        wavs;                           % wavelengths array centered at wav_centr
+        wavs_meas;                      % wavelengths of measured span
+        readouts;                       % Stores spectral intensity readouts at each length step             
     end
 
 
@@ -53,7 +56,9 @@ classdef Phot_sys<handle
             obj.updateParams();
         end
 
-        function updateParams(obj)           
+        function updateParams(obj)   
+            % Updates all parameters. 
+            % Should use if you manually change parameters of object.
             rng(3);
 
             dt=obj.T/obj.N;
@@ -85,8 +90,8 @@ classdef Phot_sys<handle
         end
         
         function run(obj,X)
+            % runs photonic system with inputs X
 
-            obj.X=X;
             sample_size=size(X,1);
 
             len_save=floor(obj.L/obj.dis_save);    % number of lengths to save
@@ -113,7 +118,8 @@ classdef Phot_sys<handle
         end
 
 
-        function A_prop=propLight(obj,A,distance)  %Split-step fourrier propagation
+        function A_prop=propLight(obj,A,distance) 
+            % Split-step fourrier propagation
             len_prop=length(0:obj.dL:distance);    % number of lengths to propagate
             len_save=floor(distance/obj.dis_save);    % number of lengths to save
             dis_bin=floor(obj.dis_save/obj.dL);     % bin size corresponding to save distance
@@ -132,12 +138,14 @@ classdef Phot_sys<handle
                 end
             end
 
-            function Ah=Dispers(A,expD2) % exponential dispersion function, input & output in time domain
+            function Ah=Dispers(A,expD2) 
+                % dispersion function, input & output in time domain
                 product_centered=expD2.*fftshift(fft(A));% expD is already centered. fftshift make the 2nd term centered to match.
                 Ah=ifft(ifftshift(product_centered));%ifftshift uncenter the product
             end
             
-            function Ah=Nonlin(A) % exponential nonlinearity function, input & output in time domain
+            function Ah=Nonlin(A) 
+                % nonlinearity function, input & output in time domain
                 I=abs(A).^2;    %Intensity
                 NL=1i*obj.gamma*I;                
                 Ah=exp(NL*obj.dL).*A;
@@ -146,6 +154,7 @@ classdef Phot_sys<handle
         end
 
         function E_modulated=waveShape(obj,x)
+            % modulates input X on the spectrum 
             N_span_encode=length(obj.span_encode);
             fill_idx=obj.fillBin(N_span_encode,length(x));
             
@@ -176,7 +185,7 @@ classdef Phot_sys<handle
             span_padded2=obj.getSpanidx(obj.wav_span_encode+0.5e-9);  %lower pad span to include overflow outside encoding span
             
             mask2=mask;
-            mask2(span_padded)=obj.applyIF(mask(span_padded),obj.waveshaper_res_hz,"flattop");
+            mask2(span_padded)=obj.applyIF(mask(span_padded),obj.waveshaper_freq_res,"flattop");
             mask(span_padded2)=mask2(span_padded2);
 
             Ef2=fftshift(fft(obj.E));
@@ -187,19 +196,20 @@ classdef Phot_sys<handle
 
         % ====Utility functions=============%
 
-        function R=prepReadouts(obj,dis)  % Prepare readouts at a particular fiber length
+        function R=prepReadouts(obj,dis)  
+            % Prepare readouts at a particular fiber length
             dis_idx=floor(dis/obj.dis_save)+1;
             readouts2=permute(obj.readouts,[3,2,1]);
             R=readouts2(:,:,dis_idx);
             R=R(:,end:-1:1);
 
-            wavs_interp=obj.wavs_meas(1):obj.osa_res_nm*1e-9:obj.wavs_meas(end);    % matching OSA resolution
+            wavs_interp=obj.wavs_meas(1):obj.osa_wav_res:obj.wavs_meas(end);    % matching OSA resolution
             R=interp1(obj.wavs_meas, R', wavs_interp, 'linear');   
             R=R';
         end
 
-        function dt=bandW2pulseW(obj,dwav,shape)   % converts pulse width in wavelength to time
-            % spec_wid in wavelength
+        function dt=bandW2pulseW(obj,dwav,shape)  
+            % converts pulse width in wavelength to time
             if shape=="sech2"
                 tbp=0.315;
             end
@@ -216,6 +226,7 @@ classdef Phot_sys<handle
         end
 
         function P_peak=avg2peak(obj,P_avg,mode)
+            % converts average power to peak power
             % P_avg in dbm, P_peak in W, fwhm in seconds
             P_avg_w=10^(P_avg/10)/1000; % P_avg in watt
             if (mode=="sech2")
@@ -225,8 +236,8 @@ classdef Phot_sys<handle
             end
         end
 
-        function C=fillBin(obj,lenA,lenB)   % return indices of B that fills A by uniformly repeating B. (lenA>lenB)
-    
+        function C=fillBin(obj,lenA,lenB)   
+            % return indices of B that fills A by uniformly repeating B. (lenA>lenB)
             C=zeros(1,lenA);
         
             bin_width_low=floor(lenA/lenB);
@@ -254,6 +265,7 @@ classdef Phot_sys<handle
         end
 
         function [span,wavs]=getSpanidx(obj,wav_span)
+            % get indices corresponding to a wavelength span
             wav_left=obj.wav_centr-wav_span./2;
             wav_right=obj.wav_centr+wav_span./2;
             freq_left=obj.c/wav_right;
@@ -271,11 +283,13 @@ classdef Phot_sys<handle
             wavs=wavs(end:-1:1);
         end
 
-        function phi= getNLphase(obj,dis) % Get nonlinear phase at a length in multiple of pi
+        function phi= getNLphase(obj,dis) 
+            % Get nonlinear phase at a length in multiple of pi
             phi=(1/obj.L_nl)*dis/pi;
         end
 
-        function B=applyIF(obj,A,filter_res,type)    % instrument filter (gaussian convolution)
+        function B=applyIF(obj,A,filter_res,type)    
+            % apply an instrument filter function
             %filter_res= resolution of the filter in Hz
             
             df=obj.dw/(2*pi);

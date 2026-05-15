@@ -1,4 +1,6 @@
 classdef IPC<handle
+% Class implementing Information Processing Capacity(IPC) estimation.
+% Part of the Matlab toolkit 'infoprocap' by Rahul Uma Ramachandran (github.com/rumaram/infoprocap)
     properties
         disp_prog=true; % Display progress in command window
         u;              % inputs.
@@ -16,13 +18,15 @@ classdef IPC<handle
 
     methods
         function obj=IPC(u,max_deg)
+            % Constructor function. Initializes the basis
+
             obj.max_deg=max_deg;
             obj.u=u;
             obj.sample_size=size(u,1);
             obj.dimn=size(u,2);
          
             obj.degrees=infoprocap.Utils.stars_and_bars(obj.max_deg,obj.dimn); 
-            % distribution of degrees of product basis is equivalent to a stars and bars Combinatorial problem
+            % distribution of degrees of product basis is equivalent to a stars-and-bars combinatorial problem
             
             obj.basis_size=size(obj.degrees,1);
             obj.y=ones(obj.sample_size,obj.basis_size);
@@ -70,7 +74,7 @@ classdef IPC<handle
         end
 
         function initThresholds(obj,X)
-            % Initialize thresholds for Algorithm 2
+            % Initialize thresholds for Algorithm 1
 
             X=cat(2,X,ones(size(X,1),1));
             N=size(X,1);
@@ -162,7 +166,7 @@ classdef IPC<handle
             end
 
             C(zero_idx)=0;
-            C(C<0)=0;
+            C(C<0)=0;  % manually sets remaining negatives to zero
          
         end
 
