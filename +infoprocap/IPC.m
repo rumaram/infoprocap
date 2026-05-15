@@ -96,28 +96,28 @@ classdef IPC<handle
             end
         end
 
-        function C=calcCap(obj,readouts,sample_idxs,basis_idxs,use_bias)
+        function C=calcCap(obj,X,sample_idxs,basis_idxs,use_bias)
             % Calculates raw capacities
             % use_bias: Add an extra column of ones to readouts
 
             arguments
                 obj 
-                readouts 
+                X 
                 sample_idxs =1:obj.sample_size
                 basis_idxs =1:obj.basis_size
                 use_bias =1
             end
 
             if use_bias
-                X=cat(2,readouts(sample_idxs,:),ones(numel(sample_idxs),1));
+                X=cat(2,X(sample_idxs,:),ones(numel(sample_idxs),1));
             else
-                X=readouts(sample_idxs,:);
+                X=X(sample_idxs,:);
             end
 
             N = size(X,1);
 
             [Q,~]=qr(X,0);
-            Xt=Q;
+            Xt=Q;   % X tilde (X with orthogonal columns)
 
             yy=obj.y(sample_idxs,basis_idxs);
             R=(Xt'*yy);
